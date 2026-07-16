@@ -1,3 +1,6 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 TermiteMoundInducedAirflowTrixi = "a297ae0c-eeef-4019-a0b9-e20d9231a4a0"
+
+[compat]
+Documenter = "1.17.0"
