@@ -9,7 +9,7 @@
 
 ## Installation
 If you have not yet installed Julia, please [follow the instructions for your
-operating system](https://julialang.org/downloads/platform/). TrixiShallowWater.jl works
+operating system](https://julialang.org/downloads/platform/). TermiteMoundInducedAirflowTrixi.jl works
 with Julia v1.12.6 and newer. We recommend using the latest stable release of Julia.
 
 TermiteMoundInducedAirflowTrixi.jl and its related tools are registered Julia packages. 
