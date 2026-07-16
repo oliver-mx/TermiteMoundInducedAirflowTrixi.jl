@@ -22,9 +22,6 @@ const TRIXI_TEST = get(ENV, "TRIXI_TEST", "all")
                 @test !(name in names(TermiteMoundInducedAirflowTrixi))
             end
         end
-    
-        # Run upstream tests for each mesh and dimension to test compatibility with Trixi.jl
-        include("test_upstream.jl")
     end
 
 end

@@ -19,7 +19,7 @@ isdir(outdir) && rm(outdir, recursive = true)
     @test_trixi_include(joinpath(EXAMPLES_DIR, "termite_mound.jl"))
     # Ensure that we do not have excessive memory allocations
     # (e.g., from type instabilities)
-    @test_allocations(Trixi.rhs!, semi, sol, 10000)
+    @test_allocations(Trixi.rhs!, semi, sol, 1000)
 end
 
 end # TermiteMound1D

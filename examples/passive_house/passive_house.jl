@@ -21,7 +21,7 @@ semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, dg, sour
 
 ###############################################################################
 # ODE solvers, callbacks etc.
-tspan = (0.0, 10.0)
+tspan = (0.0, 1.0)
 ode = semidiscretize(semi, tspan)
 
 summary_callback = SummaryCallback()
@@ -37,4 +37,4 @@ sol = solve(ode, CarpenterKennedy2N54(williamson_condition = false); dt = 1.0,
             ode_default_options()..., callback = callbacks);
 
 #pd = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi); plot(pd)
-pd = PlotData1D(sol); plot(pd)
+#pd = PlotData1D(sol); plot(pd)
