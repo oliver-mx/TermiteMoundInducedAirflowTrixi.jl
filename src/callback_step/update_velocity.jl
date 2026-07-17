@@ -47,7 +47,7 @@ function Base.show(
     end
 end
 
-function UpdateVelocityCallback(; a=1::Int)
+function UpdateVelocityCallback(; a = 1::Int)
     # Convert plain real numbers to functions for unified treatment
     a_conv = isa(a, Real) ? Returns(a) : a
     update_velocity_callback = UpdateVelocityCallback{typeof(a_conv)}(a_conv)
@@ -55,7 +55,7 @@ function UpdateVelocityCallback(; a=1::Int)
     DiscreteCallback(
         condition,
         update_velocity_callback;
-        save_positions=(false, false),
+        save_positions = (false, false),
     )
 end
 
@@ -67,14 +67,17 @@ end
 # This method is called as callback during the time integration.
 @inline function (update_velocity_callback::UpdateVelocityCallback)(integrator)
     """
-    "update_velocity_callback" updates the velocity "v1" and pressure "p0" after each time step.
-    This function is essential to solve the reformulated asymptotic model.
+    "update_velocity_callback" updates the velocity "v1" and pressure "p0" 
+    after each time step. This function is essential to solve the reformulated
+    asymptotic model.
 
-    Note: If the callback is not used, both "v1" and "p0" will remain constant in time!
+    Note: If the callback is not used, both "v1" and "p0" will remain constant
+    in time!
 
-    The CarpenterKennedy2N54() method is used to perform the time integration for v.
-    Then, the air velocity u(t,x) (i.e. "v1") is computed using the integrated value of v.
-    Finally, CarpenterKennedy2N54() is used again for "p0" and the state of the integrator is updated.
+    The CarpenterKennedy2N54() method is used to perform the time integration
+    for v. Then, the air velocity u(t,x) (i.e. "v1") is computed using the
+    integrated value of v. Finally, CarpenterKennedy2N54() is used again for
+    "p0" and the state of the integrator is updated.
     """
     #-----------------------
     original_nodes = integrator.sol.prob.p.cache.elements.node_coordinates
@@ -119,14 +122,12 @@ end
         T_u(t_prev, x, y, equations) * equations.t_ref for (x, y) in zip(nodes, Ti_prev)
     ]
     #-----------------------
-    # \frac{\partial p_0}{\partial t} = - \gamma p_0 \frac{\partial u}{\partial x} - \gamma \frac{\textrm{A}_x}{\textrm{A}} u p_0 - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)
     p0_dt_prev =
         .- equations.γ .* p0_prev .* v1_dx_prev .-
         equations.γ .* A_x_nodes ./ A_nodes .* v1_prev .* p0_prev .-
         I_w_nodes .* equations.k_w .* A_sqrt_A_inv .* (T_prev .- Tu_prev)
     p0_dt_prev = sum(p0_dt_prev) / length(p0_dt_prev)
     #-----------------------
-    # \frac{\partial v}{\partial t} = \frac{1}{\int_0^1 \frac{\rho}{A} \, dy} \left[ \int_0^1 -\rho u u_x  - \rho u \left( \beta \eta - \beta\left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}(\rho - \rho_{h_0}) \, dy \right]
     I_inv = inv.(sum((rho_prev .* A_nodes_inv) .* weights))
     beta = [equations.β ./ A(x, equations) for x in nodes]
     f =
@@ -181,15 +182,15 @@ end
     LI = LinearInterpolation(
         [t_prev, t_now],
         [v_dt_prev, v_dt],
-        extrapolation_bc=Line(),
+        extrapolation_bc = Line(),
     )
     prob = ODEProblem((u, p, t) -> LI(t), v_prev, (t_prev, t_now))
     sol = solve(
         prob,
         CarpenterKennedy2N54(
-            williamson_condition=integrator.sol.alg.williamson_condition,
+            williamson_condition = integrator.sol.alg.williamson_condition,
         ),
-        dt=integrator.dt,
+        dt = integrator.dt,
     )
     v = sol.u[end]
     #-----------------------
@@ -210,13 +211,13 @@ end
     LI = LinearInterpolation(
         [t_prev, t_now],
         [p0_dt_prev, p0_dt],
-        extrapolation_bc=Line(),
+        extrapolation_bc = Line(),
     )
     prob = ODEProblem((u, p, t) -> LI(t), p0_prev[1], (t_prev, t_now))
     sol = solve(
         prob,
-        CarpenterKennedy2N54(williamson_condition=false),
-        dt=integrator.dt,
+        CarpenterKennedy2N54(williamson_condition = false),
+        dt = integrator.dt,
     )
     p0 = sol.u[end]
     #-----------------------

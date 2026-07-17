@@ -7,44 +7,60 @@
 @doc raw"""
     PassiveHouseEquations1D()
 
-PassiveHouseEquations1D (PHE) in one space dimension. The equations are given by
+PassiveHouseEquations1D (PHE) in one space dimension.
+The equations are given by
 ```math
 	\begin{equation}
-		\frac{\partial \rho}{\partial t} + \frac{\partial \left( \rho u\right)}{\partial x} = - \frac{\textrm{A}_x}{\textrm{A}}\rho u 
+		\frac{\partial \rho}{\partial t} + \frac{\partial \left( 
+        \rho u\right)}{\partial x} = - \frac{\textrm{A}_x}{\textrm{A}}\rho u 
 	\end{equation}
     \begin{equation}
-		\frac{\partial v}{\partial t} = \frac{1}{\int_0^1 \frac{\rho}{A} \, dy} \left[ 
-		\int_0^1 -\rho u u_x  - \rho u \left( \beta \eta - \beta\left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}(\rho - \rho_{h_0}) \, dy \right] 
+		\frac{\partial v}{\partial t} = \frac{1}{\int_0^1 \frac{\rho}{A} \, dy}
+        \left[ \int_0^1 -\rho u u_x  - \rho u \left( \beta \eta - \beta
+        \left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}
+        (\rho - \rho_{h_0}) \, dy \right] 
 	\end{equation}
     \begin{equation}
-		\frac{\partial p_0}{\partial t} + \gamma p_0 \frac{\partial u}{\partial x}= - \gamma \frac{\textrm{A}_x}{\textrm{A}} u p_0 - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) 
+		\frac{\partial p_0}{\partial t} + \gamma p_0 \frac{\partial u}{\partial x}
+        = - \gamma \frac{\textrm{A}_x}{\textrm{A}} u p_0 - \frac{k_w}{\textrm{A} 
+        \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) 
 	\end{equation}
     \begin{equation}
-		\frac{\partial T_i}{\partial t} = k_i \left( T - T_i \right)  + k_s \textrm{q}_{\textrm{s}} 
+		\frac{\partial T_i}{\partial t} = k_i \left( T - T_i \right)  + k_s 
+        \textrm{q}_{\textrm{s}} 
 	\end{equation}
     \begin{equation}
 		p_0 = \rho T 
 	\end{equation}
     \begin{equation}
-		u(t,x) = \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A(y)\left[ -\frac{\partial  p_0}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)\right] \, dy 
+		u(t,x) = \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A(y)\left[ -
+        \frac{\partial  p_0}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}}
+        \left(T - \textrm{T}_\textrm{u} \right)\right] \, dy 
 	\end{equation}
 ```
-The unknown quantities of the PHE are the air density ``ρ``, the air velocity ``u``, the leading order pressure ``p_0``, the internal temperature of the mound ``T_i``, and the auxiliary velocity variable ``v``.
-Due to the single spatial dimensional, the velocity ``u`` is referred to as ``v1`` in the implementation.
-We denote the variable cross section function ``A(x)``, the height profile function ``h(x)`` and the boundary temperature function ``T_u(t,x)``.
-The boundary temperature function is defined by
+The unknown quantities of the PHE are the air density ``ρ``, the air velocity ``u``,
+the leading order pressure ``p_0``, the internal temperature of the mound ``T_i``, 
+and the auxiliary velocity variable ``v``. Due to the single spatial dimensional, the
+velocity ``u`` is referred to as ``v1`` in the implementation. We denote the variable
+cross section function ``A(x)``, the height profile function ``h(x)`` and the 
+boundary temperature function ``T_u(t,x)``. The boundary temperature function is 
+defined by
 ```math
     \begin{align}
 		\textrm{T}_\textrm{u}(t,x)  = \begin{cases}
-			\textrm{T}_\textrm{soil}(t) & ,\text{if } x \in [0,x_a] \, \cup \, (x_c, 1] \\
-			\frac{\textrm{T}_\textrm{air}(t) + T_i(t,x) }{2} & ,\text{if } x \in (x_a,x_c] \\
+			\textrm{T}_\textrm{soil}(t) & ,\text{if } x \in [0,x_a] 
+            \, \cup \, (x_c, 1] \\
+			\frac{\textrm{T}_\textrm{air}(t) + T_i(t,x) }{2} & ,\text{if } 
+            x \in (x_a,x_c] \\
 		\end{cases}
 	\end{align}
 ```
-It depends on the internal wall temperature ``T_i``, the soil temperature (at 3m depth) ``T_{soil}`` and the outside air temperature ``T_{air}``. 
-The parameters ``x_a``, ``x_b`` and ``x_c`` are fixed spatial locations along the flow channel.
+It depends on the internal wall temperature ``T_i``, the soil temperature (at 3m 
+depth) ``T_{soil}`` and the outside air temperature ``T_{air}``. The parameters 
+``x_a``, ``x_b`` and ``x_c`` are fixed spatial locations along the flow channel.
 
-The viscosity parameter is denoted by ``η`` and the dimensionless parameters are ``k_w``,  ``k_i`` and ``k_s``.
+The viscosity parameter is denoted by ``η`` and the dimensionless parameters are
+``k_w``,  ``k_i`` and ``k_s``.
 
 Reference for the PHE:
 - Marx, Oliver P. and Gasser, Ingenuin and Annika Schmidgall (2026)
