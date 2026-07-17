@@ -4,16 +4,12 @@
 # See https://ranocha.de/blog/Optimizing_EC_Trixi for further details.
 @muladd begin
 #! format: noindent
-"""
-    UpdateVelocityCallback
 
-    Callback performs explicit time steps for the velocity v and pressure p0.
-    If the callback is not used, both quantities will remain constant in time!
-
-    CarpenterKennedy2N54() is used to perform the time integration for v and p0.
-    The air velocity u(t,x) (i.e. "v1") is computed using the integrated v.
-      
-"""
+#UpdateVelocityCallback
+#Callback performs explicit time steps for the velocity v and pressure p0.
+#If the callback is not used, both quantities will remain constant in time!
+#CarpenterKennedy2N54() is used to perform the time integration for v and p0.
+#The air velocity u(t,x) (i.e. "v1") is computed using the integrated v.
 
 mutable struct UpdateVelocityCallback{Vis_count}
     a::Vis_count
@@ -66,19 +62,15 @@ end
 
 # This method is called as callback during the time integration.
 @inline function (update_velocity_callback::UpdateVelocityCallback)(integrator)
-    """
-    "update_velocity_callback" updates the velocity "v1" and pressure "p0" 
-    after each time step. This function is essential to solve the reformulated
-    asymptotic model.
-
-    Note: If the callback is not used, both "v1" and "p0" will remain constant
-    in time!
-
-    The CarpenterKennedy2N54() method is used to perform the time integration
-    for v. Then, the air velocity u(t,x) (i.e. "v1") is computed using the
-    integrated value of v. Finally, CarpenterKennedy2N54() is used again for
-    "p0" and the state of the integrator is updated.
-    """
+    #"update_velocity_callback" updates the velocity "v1" and pressure "p0" 
+    #after each time step. This function is essential to solve the reformulated
+    #asymptotic model.
+    #Note: If the callback is not used, both "v1" and "p0" will remain constant
+    #in time!
+    #The CarpenterKennedy2N54() method is used to perform the time integration
+    #for v. Then, the air velocity u(t,x) (i.e. "v1") is computed using the
+    #integrated value of v. Finally, CarpenterKennedy2N54() is used again for
+    #"p0" and the state of the integrator is updated.
     #-----------------------
     original_nodes = integrator.sol.prob.p.cache.elements.node_coordinates
     nodes = Float64.(vec(original_nodes[1, :, :]))
