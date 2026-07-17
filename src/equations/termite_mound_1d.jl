@@ -199,7 +199,7 @@ end
     #xb = (sqrt(0.09 + equations.r*r) + sqrt(r*r + h*h)) / L
     LI = LinearInterpolation(
         [0.0, equations.xa, equations.xb, 1.0],
-        [0.0, 0.3, equations.h+0.3, 0.0],
+        [0.0, 0.3, equations.h + 0.3, 0.0],
     )
     return LI(x)
 end
@@ -224,11 +224,11 @@ end
 end
 
 @inline function T_u(t_var, x_var, Ti, equations::TermiteMoundEquations1D)
-    t_var = mod(t_var, 86400/equations.tᵣ)
-    t_var = t_var/(86400/equations.tᵣ/24)
+    t_var = mod(t_var, 86400 / equations.tᵣ)
+    t_var = t_var/(86400 / equations.tᵣ/24)
     c0 = T_air(t_var, equations)
     c1 = T_soil(t_var, equations)
-    c2 = 0.5f0*(c0 + Ti * equations.T_ref)
+    c2 = 0.5f0 * (c0 + Ti * equations.T_ref)
     c3 = Ti * equations.T_ref
     return ifelse(
         (x_var ≤ equations.xa) || (x_var ≥ equations.xc),
@@ -238,8 +238,8 @@ end
 end
 
 @inline function T_u_dt(t_var, x_var, Ti_dt, equations::TermiteMoundEquations1D)
-    t_var = mod(t_var, 86400/equations.tᵣ)
-    t_var = t_var/(86400/equations.tᵣ/24)
+    t_var = mod(t_var, 86400 / equations.tᵣ)
+    t_var = t_var/(86400 / equations.tᵣ / 24)
     c0_dt = dt_T_air(t_var, equations)
     c1_dt = dt_T_soil(t_var, equations)
     c2_dt = 0.5f0 * (c0_dt + Ti_dt)

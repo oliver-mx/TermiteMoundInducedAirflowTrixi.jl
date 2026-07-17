@@ -176,12 +176,12 @@ end
 end
 
 @inline function vel2scaled(y, equations::PassiveHouseEquations1D)
-    x = inv(equations.uᵣ*100) .* y
+    x = inv(equations.uᵣ * 100) .* y
     return x
 end
 
 @inline function time2scaled(y, equations::PassiveHouseEquations1D)
-    return y * (3600/equations.tᵣ)
+    return y * (3600 / equations.tᵣ)
 end
 
 @inline function space2unscaled(x, equations::PassiveHouseEquations1D)
@@ -198,7 +198,7 @@ end
 end
 
 @inline function time2unscaled(x, equations::PassiveHouseEquations1D)
-    return x ./ (3600/equations.tᵣ)
+    return x ./ (3600 / equations.tᵣ)
 end
 
 @inline function h(x, equations::PassiveHouseEquations1D)
@@ -397,11 +397,11 @@ end
 end
 
 @inline function T_air(t_var, ::PassiveHouseEquations1D)
-    return -3.9499999999999997*sin((t_var+4)*2*pi/24) + 277.95
+    return -3.9499999999999997 * sin((t_var + 4) * 2 * pi / 24) + 277.95
 end
 
 @inline function dt_T_air(t_var, ::PassiveHouseEquations1D)
-    return -3.9499999999999997 * (2*pi/24) * cos((t_var+4)*2*pi/24)
+    return -3.9499999999999997 * (2 * pi / 24) * cos((t_var + 4) * 2 * pi / 24)
 end
 
 @inline function T_soil(t_var, ::PassiveHouseEquations1D)
@@ -437,10 +437,10 @@ end
 
 @inline function q_s(t_var, equations)
     z = equations.q₀
-    t_var = mod(t_var, 86400/equations.tᵣ)
-    t_var = t_var/(86400/equations.tᵣ)
+    t_var = mod(t_var, 86400 / equations.tᵣ)
+    t_var = t_var / (86400 / equations.tᵣ)
     xs=[0, 7, 10.5, 12, 13, 15, 16.5, 18.5, 24] ./ 24;
-    ys=([-10, -10, 0.3*z, 0.6 * z, z, z, 0, -10, -10]) ./ z;
+    ys=([-10, -10, 0.3 * z, 0.6 * z, z, z, 0, -10, -10]) ./ z;
     LI=LinearInterpolation(xs, ys);
     return LI(t_var)
 end
