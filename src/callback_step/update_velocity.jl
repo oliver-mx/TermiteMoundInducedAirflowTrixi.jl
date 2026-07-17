@@ -47,7 +47,7 @@ function Base.show(
     end
 end
 
-function UpdateVelocityCallback(; a = 1::Int)
+function UpdateVelocityCallback(; a=1::Int)
     # Convert plain real numbers to functions for unified treatment
     a_conv = isa(a, Real) ? Returns(a) : a
     update_velocity_callback = UpdateVelocityCallback{typeof(a_conv)}(a_conv)
@@ -55,7 +55,7 @@ function UpdateVelocityCallback(; a = 1::Int)
     DiscreteCallback(
         condition,
         update_velocity_callback;
-        save_positions = (false, false),
+        save_positions=(false, false),
     )
 end
 
@@ -181,15 +181,15 @@ end
     LI = LinearInterpolation(
         [t_prev, t_now],
         [v_dt_prev, v_dt],
-        extrapolation_bc = Line(),
+        extrapolation_bc=Line(),
     )
     prob = ODEProblem((u, p, t) -> LI(t), v_prev, (t_prev, t_now))
     sol = solve(
         prob,
         CarpenterKennedy2N54(
-            williamson_condition = integrator.sol.alg.williamson_condition,
+            williamson_condition=integrator.sol.alg.williamson_condition,
         ),
-        dt = integrator.dt,
+        dt=integrator.dt,
     )
     v = sol.u[end]
     #-----------------------
@@ -210,13 +210,13 @@ end
     LI = LinearInterpolation(
         [t_prev, t_now],
         [p0_dt_prev, p0_dt],
-        extrapolation_bc = Line(),
+        extrapolation_bc=Line(),
     )
     prob = ODEProblem((u, p, t) -> LI(t), p0_prev[1], (t_prev, t_now))
     sol = solve(
         prob,
-        CarpenterKennedy2N54(williamson_condition = false),
-        dt = integrator.dt,
+        CarpenterKennedy2N54(williamson_condition=false),
+        dt=integrator.dt,
     )
     p0 = sol.u[end]
     #-----------------------
