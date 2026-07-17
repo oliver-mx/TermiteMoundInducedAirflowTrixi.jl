@@ -13,58 +13,68 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    name: ${{ matrix.trixi_test }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    permissions: # needed to allow julia-actions/cache to proactively delete old caches that it has created
-      actions: write
-      contents: read
     strategy:
       fail-fast: false
       matrix:
         version:
-          - '1.11'
+          - '1.10'
         os:
           - ubuntu-latest
         arch:
           - x64
+        trixi_test:
+          - termite_mound
+          - passive_house
+          - upstream
+        include:
+          - version: '1.10'
+            os: macos-latest
+            arch: aarch64
+            trixi_test: upstream
+          - version: '1.10'
+            os: windows-latest
+            arch: x64
+            trixi_test: upstream
     steps:
-      - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: julia-actions/cache@v2
+      - run: julia -e 'using InteractiveUtils; versioninfo(verbose=true)'
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-      - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v4
+      - name: Run tests
+        uses: julia-actions/julia-runtest@v1
+        with:
+          coverage: true
+        env:
+          PYTHON: ""
+          TRIXI_TEST: ${{ matrix.trixi_test }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # for authenticated downloads without strict rate limits
+      - name: Process coverage results
+        uses: julia-actions/julia-processcoverage@v1
+        if: ${{ !cancelled() }}
+        with:
+          directories: src,examples
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v7
+        if: ${{ !cancelled() }}
         with:
           files: lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
-  docs:
-    name: Documentation
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write # needed to allow julia-actions/cache to proactively delete old caches that it has created
-      contents: write
-      statuses: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: '1'
-      - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-docdeploy@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
-      - name: Run doctests
-        shell: julia --project=docs --color=yes {0}
-        run: |
-          using Documenter: DocMeta, doctest
-          using TermiteMoundInducedAirflowTrixi
-          DocMeta.setdocmeta!(TermiteMoundInducedAirflowTrixi, :DocTestSetup, :(using TermiteMoundInducedAirflowTrixi); recursive=true)
-          doctest(TermiteMoundInducedAirflowTrixi)
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} # now required for public repos
+      # Workaround for https://github.com/coverallsapp/github-action/issues/264
+      - name: Trust Coveralls Homebrew tap (Homebrew 6 requirement)
+        if: runner.os == 'macOS'
+        run: brew trust coverallsapp/coveralls
+      - name: Upload coverage report to Coveralls
+        uses: coverallsapp/github-action@v2
+        if: ${{ !cancelled() }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./lcov.info
+          format: lcov
