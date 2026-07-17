@@ -57,8 +57,8 @@ Reference for the TME:
 struct TermiteMoundEquations1D{RealT <: Real} <: AbstractEquations{1, 5}
     γ::RealT
     inv_gamma_minus_one::RealT
-    k_i::RealT 
-    k_w::RealT 
+    k_i::RealT
+    k_w::RealT
     tᵣ::RealT
     uᵣ::RealT
     xa::RealT
@@ -67,18 +67,31 @@ struct TermiteMoundEquations1D{RealT <: Real} <: AbstractEquations{1, 5}
     r::RealT
     h::RealT
     L::RealT
-    β::RealT 
-    η::RealT 
-    Fr²::RealT 
-    ρₕ₀::RealT 
+    β::RealT
+    η::RealT
+    Fr²::RealT
+    ρₕ₀::RealT
     T_ref::RealT
     t_ref::RealT
     T0::RealT
     v0::RealT
     Ti_LI::Interpolations.Extrapolation
-    function TermiteMoundEquations1D(; γ=1.3987529976019184, k_i=0.0004184703194089407, k_w=4.550553359854458, tᵣ=87.10175873820496, uᵣ=0.05, xa=0.17221939177753745, xb=0.5680821161575328, xc=0.9793345160180965, r=0.6874197366854203, h=1.5810403656581307, L=4.355087936910248, β=26.9749915565812, η=0.93, Fr²=5.851592474205325e-5, ρₕ₀=0.982, T_ref=297.76980029566033, t_ref=0.0033582989242263127, T0=27.0, v0=-2.219, Ti_LI=LinearInterpolation([0.0, 0.5, 1.0],[27.6, 28.8, 27.5]))
+    function TermiteMoundEquations1D(; γ = 1.3987529976019184,
+                                     k_i = 0.0004184703194089407,
+                                     k_w = 4.550553359854458, tᵣ = 87.10175873820496,
+                                     uᵣ = 0.05, xa = 0.17221939177753745,
+                                     xb = 0.5680821161575328, xc = 0.9793345160180965,
+                                     r = 0.6874197366854203, h = 1.5810403656581307,
+                                     L = 4.355087936910248, β = 26.9749915565812,
+                                     η = 0.93, Fr² = 5.851592474205325e-5, ρₕ₀ = 0.982,
+                                     T_ref = 297.76980029566033,
+                                     t_ref = 0.0033582989242263127, T0 = 27.0,
+                                     v0 = -2.219,
+                                     Ti_LI = LinearInterpolation([0.0, 0.5, 1.0],
+                                                                 [27.6, 28.8, 27.5]))
         γ, inv_gamma_minus_one = promote(γ, inv(γ - 1.0))
-        new{typeof(β)}(γ, inv_gamma_minus_one, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI)
+        new{typeof(β)}(γ, inv_gamma_minus_one, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β,
+                       η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI)
     end
 end
 
@@ -87,15 +100,15 @@ function Trixi.varnames(u, ::TermiteMoundEquations1D)
 end
 
 function Trixi.cons2prim(u, ::TermiteMoundEquations1D)
-    return u 
+    return u
 end
 
 function Trixi.prim2cons(prim, ::TermiteMoundEquations1D)
-    return prim 
+    return prim
 end
 
 function Trixi.cons2entropy(u, ::TermiteMoundEquations1D)
-    return u 
+    return u
 end
 
 function Trixi.cons2cons(u, ::TermiteMoundEquations1D)
@@ -113,15 +126,15 @@ end
 end
 
 @inline function source_terms(u, x, t, equations::TermiteMoundEquations1D)
-        rho, v1, p0, Ti, _ = u
-        x_var = x[1]
-        T = p0 / rho
-        du1 = - A_x(x_var, equations) / A(x_var, equations) * rho * v1
-        du4 = equations.k_i * (T - Ti)
-        return SVector(du1, 0.0, 0.0, du4, 0.0)
+    rho, v1, p0, Ti, _ = u
+    x_var = x[1]
+    T = p0 / rho
+    du1 = - A_x(x_var, equations) / A(x_var, equations) * rho * v1
+    du4 = equations.k_i * (T - Ti)
+    return SVector(du1, 0.0, 0.0, du4, 0.0)
 end
 
-@inline function temp2scaled(y,equations::TermiteMoundEquations1D)
+@inline function temp2scaled(y, equations::TermiteMoundEquations1D)
     z = 273.15
     y = y .+ z
     x = y ./ equations.T_ref
@@ -137,7 +150,7 @@ end
 end
 
 @inline function space2unscaled(x, equations::TermiteMoundEquations1D)
-    return equations.L .* x 
+    return equations.L .* x
 end
 
 @inline function temp2unscaled(x, equations::TermiteMoundEquations1D)
@@ -146,7 +159,7 @@ end
 end
 
 @inline function vel2unscaled(x, equations::TermiteMoundEquations1D)
-    return x.* equations.uᵣ * 100
+    return x .* equations.uᵣ * 100
 end
 
 @inline function time2unscaled(x, equations::TermiteMoundEquations1D)
@@ -155,23 +168,24 @@ end
 
 @inline function h(x, equations::TermiteMoundEquations1D)
     #xb = (sqrt(0.09 + equations.r*r) + sqrt(r*r + h*h)) / L
-    LI = LinearInterpolation([0.0, equations.xa, equations.xb, 1.0], [0.0, 0.3, equations.h+0.3, 0.0])
+    LI = LinearInterpolation([0.0, equations.xa, equations.xb, 1.0],
+                             [0.0, 0.3, equations.h+0.3, 0.0])
     return LI(x)
 end
 
 @inline function h_x(x, equations::TermiteMoundEquations1D)
     dy = if x < equations.xa
-            0.3 / (equations.xa * equations.L)
-        elseif x < equations.xb
-            equations.h / (equations.xb - equations.xa) / equations.L
-        else
-            -1.0
+        0.3 / (equations.xa * equations.L)
+    elseif x < equations.xb
+        equations.h / (equations.xb - equations.xa) / equations.L
+    else
+        -1.0
     end
     return dy
 end
 
 @inline function A(x, ::TermiteMoundEquations1D)
-    return 1.0 
+    return 1.0
 end
 
 @inline function A_x(x, ::TermiteMoundEquations1D)
@@ -185,7 +199,8 @@ end
     c1 = T_soil(t_var, equations)
     c2 = 0.5f0*(c0 + Ti * equations.T_ref)
     c3 = Ti * equations.T_ref
-    return ifelse( (x_var ≤ equations.xa) || (x_var ≥ equations.xc), c1, ifelse(x_var ≤ equations.xb, c2, c3))
+    return ifelse((x_var ≤ equations.xa) || (x_var ≥ equations.xc), c1,
+                  ifelse(x_var ≤ equations.xb, c2, c3))
 end
 
 @inline function T_u_dt(t_var, x_var, Ti_dt, equations::TermiteMoundEquations1D)
@@ -195,7 +210,8 @@ end
     c1_dt = dt_T_soil(t_var, equations)
     c2_dt = 0.5f0 * (c0_dt + Ti_dt)
     c3_dt = Ti_dt
-    return ifelse( (x_var ≤ equations.xa) || (x_var ≥ equations.xc), c1_dt, ifelse(x_var ≤ equations.xb, c2_dt, c3_dt))
+    return ifelse((x_var ≤ equations.xa) || (x_var ≥ equations.xc), c1_dt,
+                  ifelse(x_var ≤ equations.xb, c2_dt, c3_dt))
 end
 
 @inline function LinearInterpolation2(x, y, ::TermiteMoundEquations1D)
@@ -216,38 +232,98 @@ end
     return LI
 end
 
-@inline function Fourir(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var, ::TermiteMoundEquations1D)
-    return a0 + a1 * cos(pi * t_var / 12.0) + a2 * sin(pi * t_var / 12.0) + a3 * cos(pi * t_var / 6.0) + a4 * sin(pi * t_var / 6.0) + a5 * cos(pi * t_var / 4.0) + a6 * sin(pi * t_var / 4.0) + a7 * cos(pi * t_var / 3.0) + a8 * sin(pi * t_var / 3.0) + a9 * cos(pi * t_var / 2.4) + a10 * sin(pi * t_var /2.4) 
+@inline function Fourir(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var,
+                        ::TermiteMoundEquations1D)
+    return a0 + a1 * cos(pi * t_var / 12.0) + a2 * sin(pi * t_var / 12.0) +
+           a3 * cos(pi * t_var / 6.0) + a4 * sin(pi * t_var / 6.0) +
+           a5 * cos(pi * t_var / 4.0) + a6 * sin(pi * t_var / 4.0) +
+           a7 * cos(pi * t_var / 3.0) + a8 * sin(pi * t_var / 3.0) +
+           a9 * cos(pi * t_var / 2.4) + a10 * sin(pi * t_var / 2.4)
 end
 
-@inline function dt_Fourir(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var, ::TermiteMoundEquations1D)
-    return - a1 .* sin(pi * t_var / 12.0) .* (pi / 12.0) + a2 * cos(pi * t_var / 12.0) * (pi / 12.0) - a3 * sin(pi * t_var / 6.0) * (pi / 6.0) + a4 * cos(pi * t_var / 6.0) * (pi / 6.0) - a5 * sin(pi * t_var / 4.0) * (pi / 4.0) + a6 * cos(pi * t_var / 4.0) * (pi / 4.0) - a7 * sin(pi * t_var / 3.0) * (pi / 3.0) + a8 * cos(pi * t_var / 3.0) * (pi / 3.0) - a9 * sin(pi * t_var / 2.4) * (pi / 2.4) + a10 * cos(pi * t_var / 2.4) .* (pi / 2.4)              
+@inline function dt_Fourir(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var,
+                           ::TermiteMoundEquations1D)
+    return - a1 .* sin(pi * t_var / 12.0) .* (pi / 12.0) +
+           a2 * cos(pi * t_var / 12.0) * (pi / 12.0) -
+           a3 * sin(pi * t_var / 6.0) * (pi / 6.0) +
+           a4 * cos(pi * t_var / 6.0) * (pi / 6.0) -
+           a5 * sin(pi * t_var / 4.0) * (pi / 4.0) +
+           a6 * cos(pi * t_var / 4.0) * (pi / 4.0) -
+           a7 * sin(pi * t_var / 3.0) * (pi / 3.0) +
+           a8 * cos(pi * t_var / 3.0) * (pi / 3.0) -
+           a9 * sin(pi * t_var / 2.4) * (pi / 2.4) +
+           a10 * cos(pi * t_var / 2.4) .* (pi / 2.4)
 end
 
 @inline function bspline2linear(nodes, vals, t, ti, ::TermiteMoundEquations1D)
-    itp = Interpolations.scale(interpolate(hcat(nodes, vals), (BSpline(Cubic(Natural(OnGrid()))), NoInterp())), t, 1:2)
-    nodesitp, valsitp = [itp(t,1) for t in ti], [itp(t,2) for t in ti]
+    itp = Interpolations.scale(interpolate(hcat(nodes, vals),
+                                           (BSpline(Cubic(Natural(OnGrid()))),
+                                            NoInterp())), t, 1:2)
+    nodesitp, valsitp = [itp(t, 1) for t in ti], [itp(t, 2) for t in ti]
     return LinearInterpolation(nodesitp, valsitp)
 end
 
 @inline function T_air(t_var, equations::TermiteMoundEquations1D)
-    a0 =       300.1; a1 =      -2.627; a10 =    -0.03607; a2 =      -6.092; a3 =      0.4451; a4 =      0.2248; a5 =     -0.5704; a6 =      0.2365; a7 =     0.02813; a8 =     -0.4064; a9 =    -0.07545
-    return Fourir(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var, equations::TermiteMoundEquations1D)
+    a0 = 300.1;
+    a1 = -2.627;
+    a10 = -0.03607;
+    a2 = -6.092;
+    a3 = 0.4451;
+    a4 = 0.2248;
+    a5 = -0.5704;
+    a6 = 0.2365;
+    a7 = 0.02813;
+    a8 = -0.4064;
+    a9 = -0.07545
+    return Fourir(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var,
+                  equations::TermiteMoundEquations1D)
 end
 
 @inline function dt_T_air(t_var, equations::TermiteMoundEquations1D)
-    a1 =      -2.627; a10 =    -0.03607; a2 =      -6.092; a3 =      0.4451; a4 =      0.2248; a5 =     -0.5704; a6 =      0.2365; a7 =     0.02813; a8 =     -0.4064; a9 =    -0.07545
-    return dt_Fourir(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var, equations::TermiteMoundEquations1D)
+    a1 = -2.627;
+    a10 = -0.03607;
+    a2 = -6.092;
+    a3 = 0.4451;
+    a4 = 0.2248;
+    a5 = -0.5704;
+    a6 = 0.2365;
+    a7 = 0.02813;
+    a8 = -0.4064;
+    a9 = -0.07545
+    return dt_Fourir(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var,
+                     equations::TermiteMoundEquations1D)
 end
 
 @inline function T_soil(t_var, equations::TermiteMoundEquations1D)
-    a0 = 302.9; a1 = 1.413; a10 = -0.005461; a2 = -0.09037; a3 = -0.08303; a4 = -0.2159; a5 = -0.01125 ;a6 = 0.01467; a7 = -0.0008037; a8 = -0.01079; a9 = -0.002245
-    return Fourir(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var, equations::TermiteMoundEquations1D)
+    a0 = 302.9;
+    a1 = 1.413;
+    a10 = -0.005461;
+    a2 = -0.09037;
+    a3 = -0.08303;
+    a4 = -0.2159;
+    a5 = -0.01125;
+    a6 = 0.01467;
+    a7 = -0.0008037;
+    a8 = -0.01079;
+    a9 = -0.002245
+    return Fourir(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var,
+                  equations::TermiteMoundEquations1D)
 end
 
 @inline function dt_T_soil(t_var, equations::TermiteMoundEquations1D)
-    a0 = 302.9; a1 = 1.413; a10 = -0.005461; a2 = -0.09037; a3 = -0.08303; a4 = -0.2159; a5 = -0.01125 ;a6 = 0.01467; a7 = -0.0008037; a8 = -0.01079; a9 = -0.002245
-    return dt_Fourir(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var, equations::TermiteMoundEquations1D)
+    a0 = 302.9;
+    a1 = 1.413;
+    a10 = -0.005461;
+    a2 = -0.09037;
+    a3 = -0.08303;
+    a4 = -0.2159;
+    a5 = -0.01125;
+    a6 = 0.01467;
+    a7 = -0.0008037;
+    a8 = -0.01079;
+    a9 = -0.002245
+    return dt_Fourir(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var,
+                     equations::TermiteMoundEquations1D)
 end
 
 @inline function I_w(x_var, equations::TermiteMoundEquations1D)
@@ -255,7 +331,7 @@ end
         return 0.5
     elseif x_var ≤ equations.xc
         return 1.0
-    else 
+    else
         return 0.5
     end
 end
@@ -285,25 +361,25 @@ end
     return SVector(f1, 0.0, 0.0, 0.0, 0.0)
 end
 
-@inline function flux_ranocha(u_ll, u_rr, orientation::Integer, ::TermiteMoundEquations1D)
+@inline function flux_ranocha(u_ll, u_rr, orientation::Integer,
+                              ::TermiteMoundEquations1D)
     rho_ll, v1_ll, _, _, _ = u_ll
     rho_rr, v1_rr, _, _, _ = u_rr
     rho_mean = ln_mean(rho_ll, rho_rr)
-    v1_mean =   if v1_ll > 0.0 && v1_rr > 0.0
-                    ln_mean(v1_ll, v1_rr)
-                elseif v1_ll < 0.0 && v1_rr < 0.0
-                    - ln_mean(-v1_ll, -v1_rr)
-                else
-                    0.5f0 * (v1_ll + v1_rr)
-                end
+    v1_mean = if v1_ll > 0.0 && v1_rr > 0.0
+        ln_mean(v1_ll, v1_rr)
+    elseif v1_ll < 0.0 && v1_rr < 0.0
+        - ln_mean(-v1_ll, -v1_rr)
+    else
+        0.5f0 * (v1_ll + v1_rr)
+    end
     f1 = rho_mean * v1_mean
     return SVector(f1, 0.0, 0.0, 0.0, 0.0)
 end
 
 @inline function Trixi.max_abs_speeds(u, equations::TermiteMoundEquations1D)
     rho, v1, p0, _, _ = u
-    c = sqrt(equations.γ * p0 / rho) 
+    c = sqrt(equations.γ * p0 / rho)
     return (abs(v1) + c,)
 end
-
 end # @muladd

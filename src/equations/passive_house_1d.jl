@@ -56,8 +56,8 @@ Reference for the PHE:
 struct PassiveHouseEquations1D{RealT <: Real} <: AbstractEquations{1, 5}
     γ::RealT
     inv_gamma_minus_one::RealT
-    k_i::RealT 
-    k_w::RealT 
+    k_i::RealT
+    k_w::RealT
     k_s::RealT
     q₀::RealT
     tᵣ::RealT
@@ -67,18 +67,41 @@ struct PassiveHouseEquations1D{RealT <: Real} <: AbstractEquations{1, 5}
     xc::RealT
     h::RealT
     L::RealT
-    β::RealT 
-    η::RealT 
-    Fr²::RealT 
-    ρₕ₀::RealT 
+    β::RealT
+    η::RealT
+    Fr²::RealT
+    ρₕ₀::RealT
     T_ref::RealT
     t_ref::RealT
     T0::RealT
     v0::RealT
     Ti_LI::Interpolations.Extrapolation
-    function PassiveHouseEquations1D(; γ =1.3987529976019184, k_i = 2.2216666666666667e-5, k_w = 0.12601678420854714, k_s = 2.2383062329968375e-6, q₀ = 50.0, tᵣ = 107.5, uᵣ = 0.2, xa = 0.13953488372093023, xb = 0.37209302325581395, xc = 0.8604651162790697, h = 5.0, L = 21.5, β = 0.3309860294294887, η = 0.93, Fr² = 0.00018964985894791742, ρₕ₀ = 0.982, T_ref=297.76980029566033, t_ref=0.0033582989242263127, T0=27.0, v0=-2.219, Ti_LI= LinearInterpolation([0.0, 0.36206896558139534, 0.3793103446511628, 1.0], [27.0, 27.0, 18.0, 18.0]))
+    function PassiveHouseEquations1D(; γ = 1.3987529976019184,
+                                     k_i = 2.2216666666666667e-5,
+                                     k_w = 0.12601678420854714,
+                                     k_s = 2.2383062329968375e-6, q₀ = 50.0, tᵣ = 107.5,
+                                     uᵣ = 0.2, xa = 0.13953488372093023,
+                                     xb = 0.37209302325581395, xc = 0.8604651162790697,
+                                     h = 5.0, L = 21.5, β = 0.3309860294294887,
+                                     η = 0.93, Fr² = 0.00018964985894791742,
+                                     ρₕ₀ = 0.982, T_ref = 297.76980029566033,
+                                     t_ref = 0.0033582989242263127, T0 = 27.0,
+                                     v0 = -2.219,
+                                     Ti_LI = LinearInterpolation([
+                                                                     0.0,
+                                                                     0.36206896558139534,
+                                                                     0.3793103446511628,
+                                                                     1.0
+                                                                 ],
+                                                                 [
+                                                                     27.0,
+                                                                     27.0,
+                                                                     18.0,
+                                                                     18.0
+                                                                 ]))
         γ, inv_gamma_minus_one = promote(γ, inv(γ - 1.0))
-        new{typeof(β)}(γ, inv_gamma_minus_one, k_i, k_w, k_s, q₀, tᵣ, uᵣ, xa, xb, xc, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI)
+        new{typeof(β)}(γ, inv_gamma_minus_one, k_i, k_w, k_s, q₀, tᵣ, uᵣ, xa, xb, xc, h,
+                       L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI)
     end
 end
 
@@ -87,15 +110,15 @@ function Trixi.varnames(u, ::PassiveHouseEquations1D)
 end
 
 function Trixi.cons2prim(u, ::PassiveHouseEquations1D)
-    return u 
+    return u
 end
 
 function Trixi.prim2cons(prim, ::PassiveHouseEquations1D)
-    return prim 
+    return prim
 end
 
 function Trixi.cons2entropy(u, ::PassiveHouseEquations1D)
-    return u 
+    return u
 end
 
 function Trixi.cons2cons(u, ::PassiveHouseEquations1D)
@@ -113,15 +136,15 @@ end
 end
 
 @inline function source_terms(u, x, t, equations::PassiveHouseEquations1D)
-        rho, v1, p0, Ti, _ = u
-        x_var = x[1]
-        T = p0 / rho
-        du1 = - A_x(x_var, equations) / A(x_var, equations) * rho * v1
-        du4 = equations.k_i * (T - Ti) + equations.k_s * Q_s(t, x_var, equations)
-        return SVector(du1, 0.0, 0.0, du4, 0.0)
+    rho, v1, p0, Ti, _ = u
+    x_var = x[1]
+    T = p0 / rho
+    du1 = - A_x(x_var, equations) / A(x_var, equations) * rho * v1
+    du4 = equations.k_i * (T - Ti) + equations.k_s * Q_s(t, x_var, equations)
+    return SVector(du1, 0.0, 0.0, du4, 0.0)
 end
 
-@inline function temp2scaled(y,equations::PassiveHouseEquations1D)
+@inline function temp2scaled(y, equations::PassiveHouseEquations1D)
     z = 273.15
     y = y .+ z
     x = y ./ equations.T_ref
@@ -129,7 +152,7 @@ end
 end
 
 @inline function vel2scaled(y, equations::PassiveHouseEquations1D)
-    x = inv(equations.uᵣ*100) .* y 
+    x = inv(equations.uᵣ*100) .* y
     return x
 end
 
@@ -138,7 +161,7 @@ end
 end
 
 @inline function space2unscaled(x, equations::PassiveHouseEquations1D)
-    return equations.L .* x 
+    return equations.L .* x
 end
 
 @inline function temp2unscaled(x, equations::PassiveHouseEquations1D)
@@ -147,7 +170,7 @@ end
 end
 
 @inline function vel2unscaled(x, equations::PassiveHouseEquations1D)
-    return x.* equations.uᵣ * 100
+    return x .* equations.uᵣ * 100
 end
 
 @inline function time2unscaled(x, equations::PassiveHouseEquations1D)
@@ -199,7 +222,8 @@ end
     s3 = 1 / (1 + exp(-k * (x - x3)))
     s4 = 1 / (1 + exp(-k * (x - x4)))
     s5 = 1 / (1 + exp(-k * (x - 1.0)))
-    y = A1 * (1 - s1) + A2 * (s1 - s2) + A3 * (s2 - s3) + A4 * (s3 - s4) + A1 * (s4 - s5) + A1 * s5
+    y = A1 * (1 - s1) + A2 * (s1 - s2) + A3 * (s2 - s3) + A4 * (s3 - s4) +
+        A1 * (s4 - s5) + A1 * s5
     return y
 end
 
@@ -217,8 +241,10 @@ end
     ds2 = k * exp(-k * (x - x2)) / ((1 + exp(-k * (x - x2)))*(1 + exp(-k * (x - x2))))
     ds3 = k * exp(-k * (x - x3)) / ((1 + exp(-k * (x - x3)))*(1 + exp(-k * (x - x3))))
     ds4 = k * exp(-k * (x - x4)) / ((1 + exp(-k * (x - x4)))*(1 + exp(-k * (x - x4))))
-    ds5 = k * exp(-k * (x - 1.0)) / ((1 + exp(-k * (x - 1.0)))*(1 + exp(-k * (x - 1.0))))
-    dy = -A1 * ds1 + A2 * (ds1 - ds2) + A3 * (ds2 - ds3) + A4 * (ds3 - ds4) + A1 * (ds4 - ds5) + A1 * ds5
+    ds5 = k * exp(-k * (x - 1.0)) /
+          ((1 + exp(-k * (x - 1.0)))*(1 + exp(-k * (x - 1.0))))
+    dy = -A1 * ds1 + A2 * (ds1 - ds2) + A3 * (ds2 - ds3) + A4 * (ds3 - ds4) +
+         A1 * (ds4 - ds5) + A1 * ds5
     return dy
 end
 
@@ -229,9 +255,10 @@ end
     t_var = t_var/(86400/equations.tᵣ/24)
     c0 = T_air(t_var, equations)
     c1 = T_soil(t_var, equations)
-    c2 = ϵ0 * c0 + (1.0-ϵ0) * Ti * equations.T_ref 
-    c3 = ϵ1 * c0 + (1.0-ϵ1) * Ti * equations.T_ref 
-    return ifelse( (x_var ≤ equations.xa) || (x_var ≥ equations.xc), c1, ifelse(x_var ≤ equations.xb, c2, c3))
+    c2 = ϵ0 * c0 + (1.0-ϵ0) * Ti * equations.T_ref
+    c3 = ϵ1 * c0 + (1.0-ϵ1) * Ti * equations.T_ref
+    return ifelse((x_var ≤ equations.xa) || (x_var ≥ equations.xc), c1,
+                  ifelse(x_var ≤ equations.xb, c2, c3))
 end
 
 @inline function T_u_dt(t_var, x_var, Ti_dt, equations::PassiveHouseEquations1D)
@@ -243,7 +270,8 @@ end
     c1_dt = dt_T_soil(t_var, equations)
     c2_dt = ϵ0 * c0_dt + (1.0-ϵ2) * Ti_dt
     c3_dt = ϵ1 * c0_dt + (1.0-ϵ3) * Ti_dt
-    return ifelse( (x_var ≤ equations.xa) || (x_var ≥ equations.xc), c1_dt, ifelse(x_var ≤ equations.xb, c2_dt, c3_dt))
+    return ifelse((x_var ≤ equations.xa) || (x_var ≥ equations.xc), c1_dt,
+                  ifelse(x_var ≤ equations.xb, c2_dt, c3_dt))
 end
 
 @inline function LinearInterpolation2(x, y, ::PassiveHouseEquations1D)
@@ -264,17 +292,34 @@ end
     return LI
 end
 
-@inline function Fourir(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var, ::PassiveHouseEquations1D)
-    return a0 + a1 * cos(pi * t_var / 12.0) + a2 * sin(pi * t_var / 12.0) + a3 * cos(pi * t_var / 6.0) + a4 * sin(pi * t_var / 6.0) + a5 * cos(pi * t_var / 4.0) + a6 * sin(pi * t_var / 4.0) + a7 * cos(pi * t_var / 3.0) + a8 * sin(pi * t_var / 3.0) + a9 * cos(pi * t_var / 2.4) + a10 * sin(pi * t_var /2.4) 
+@inline function Fourir(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var,
+                        ::PassiveHouseEquations1D)
+    return a0 + a1 * cos(pi * t_var / 12.0) + a2 * sin(pi * t_var / 12.0) +
+           a3 * cos(pi * t_var / 6.0) + a4 * sin(pi * t_var / 6.0) +
+           a5 * cos(pi * t_var / 4.0) + a6 * sin(pi * t_var / 4.0) +
+           a7 * cos(pi * t_var / 3.0) + a8 * sin(pi * t_var / 3.0) +
+           a9 * cos(pi * t_var / 2.4) + a10 * sin(pi * t_var / 2.4)
 end
 
-@inline function dt_Fourir(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var, ::PassiveHouseEquations1D)
-    return - a1 .* sin(pi * t_var / 12.0) .* (pi / 12.0) + a2 * cos(pi * t_var / 12.0) * (pi / 12.0) - a3 * sin(pi * t_var / 6.0) * (pi / 6.0) + a4 * cos(pi * t_var / 6.0) * (pi / 6.0) - a5 * sin(pi * t_var / 4.0) * (pi / 4.0) + a6 * cos(pi * t_var / 4.0) * (pi / 4.0) - a7 * sin(pi * t_var / 3.0) * (pi / 3.0) + a8 * cos(pi * t_var / 3.0) * (pi / 3.0) - a9 * sin(pi * t_var / 2.4) * (pi / 2.4) + a10 * cos(pi * t_var / 2.4) .* (pi / 2.4)              
+@inline function dt_Fourir(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var,
+                           ::PassiveHouseEquations1D)
+    return - a1 .* sin(pi * t_var / 12.0) .* (pi / 12.0) +
+           a2 * cos(pi * t_var / 12.0) * (pi / 12.0) -
+           a3 * sin(pi * t_var / 6.0) * (pi / 6.0) +
+           a4 * cos(pi * t_var / 6.0) * (pi / 6.0) -
+           a5 * sin(pi * t_var / 4.0) * (pi / 4.0) +
+           a6 * cos(pi * t_var / 4.0) * (pi / 4.0) -
+           a7 * sin(pi * t_var / 3.0) * (pi / 3.0) +
+           a8 * cos(pi * t_var / 3.0) * (pi / 3.0) -
+           a9 * sin(pi * t_var / 2.4) * (pi / 2.4) +
+           a10 * cos(pi * t_var / 2.4) .* (pi / 2.4)
 end
 
 @inline function bspline2linear(nodes, vals, t, ti, ::PassiveHouseEquations1D)
-    itp = Interpolations.scale(interpolate(hcat(nodes, vals), (BSpline(Cubic(Natural(OnGrid()))), NoInterp())), t, 1:2)
-    nodesitp, valsitp = [itp(t,1) for t in ti], [itp(t,2) for t in ti]
+    itp = Interpolations.scale(interpolate(hcat(nodes, vals),
+                                           (BSpline(Cubic(Natural(OnGrid()))),
+                                            NoInterp())), t, 1:2)
+    nodesitp, valsitp = [itp(t, 1) for t in ti], [itp(t, 2) for t in ti]
     return LinearInterpolation(nodesitp, valsitp)
 end
 
@@ -299,7 +344,14 @@ end
 end
 
 @inline function I_s(x_var, equations::PassiveHouseEquations1D)
-    LI = LinearInterpolation([0.0, equations.xa - 1e-8, equations.xa, equations.xb, equations.xb + 1e-8, 1.0],[0.0, 0.0, 1.0, 1.0, 0.0, 0.0]) 
+    LI = LinearInterpolation([
+                                 0.0,
+                                 equations.xa - 1e-8,
+                                 equations.xa,
+                                 equations.xb,
+                                 equations.xb + 1e-8,
+                                 1.0
+                             ], [0.0, 0.0, 1.0, 1.0, 0.0, 0.0])
     return LI(x_var)
 end
 
@@ -307,7 +359,7 @@ end
     return I_s(x_var, equations) * q_s(t_var, equations)
 end
 
-@inline function q_s(t_var, equations) 
+@inline function q_s(t_var, equations)
     z = equations.q₀
     t_var = mod(t_var, 86400/equations.tᵣ)
     t_var = t_var/(86400/equations.tᵣ)
@@ -342,25 +394,25 @@ end
     return SVector(f1, 0.0, 0.0, 0.0, 0.0)
 end
 
-@inline function flux_ranocha(u_ll, u_rr, orientation::Integer, ::PassiveHouseEquations1D)
+@inline function flux_ranocha(u_ll, u_rr, orientation::Integer,
+                              ::PassiveHouseEquations1D)
     rho_ll, v1_ll, _, _, _ = u_ll
     rho_rr, v1_rr, _, _, _ = u_rr
     rho_mean = ln_mean(rho_ll, rho_rr)
-    v1_mean =   if v1_ll > 0.0 && v1_rr > 0.0
-                    ln_mean(v1_ll, v1_rr)
-                elseif v1_ll < 0.0 && v1_rr < 0.0
-                    - ln_mean(-v1_ll, -v1_rr)
-                else
-                    0.5f0 * (v1_ll + v1_rr)
-                end
+    v1_mean = if v1_ll > 0.0 && v1_rr > 0.0
+        ln_mean(v1_ll, v1_rr)
+    elseif v1_ll < 0.0 && v1_rr < 0.0
+        - ln_mean(-v1_ll, -v1_rr)
+    else
+        0.5f0 * (v1_ll + v1_rr)
+    end
     f1 = rho_mean * v1_mean
     return SVector(f1, 0.0, 0.0, 0.0, 0.0)
 end
 
 @inline function Trixi.max_abs_speeds(u, equations::PassiveHouseEquations1D)
     rho, v1, p0, _, _ = u
-    c = sqrt(equations.γ * p0 / rho) 
+    c = sqrt(equations.γ * p0 / rho)
     return (abs(v1) + c,)
 end
-
 end # @muladd

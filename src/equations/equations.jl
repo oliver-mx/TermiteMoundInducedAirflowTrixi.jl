@@ -10,5 +10,4 @@
 
 include("termite_mound_1d.jl")
 include("passive_house_1d.jl")
-
 end # @muladd
