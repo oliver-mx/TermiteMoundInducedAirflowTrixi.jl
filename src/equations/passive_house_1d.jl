@@ -96,7 +96,7 @@ struct PassiveHouseEquations1D{RealT<:Real} <: AbstractEquations{1,5}
         t_ref=0.0033582989242263127,
         T0=27.0,
         v0=-2.219,
-        Ti_LI=LinearInterpolation(
+        Ti_LI=linear_interpolation(
             [0.0, 0.36206896558139534, 0.3793103446511628, 1.0],
             [27.0, 27.0, 18.0, 18.0],
         ),
@@ -314,7 +314,7 @@ end
     )
 end
 
-@inline function LinearInterpolation2(x, y, ::PassiveHouseEquations1D)
+@inline function linear_interpolation2(x, y, ::PassiveHouseEquations1D)
     iunique_indices = unique!(collect(zip(x, y)))[2]
     x_unique = []
     y_unique = []
@@ -328,7 +328,7 @@ end
             seen[xi] = true
         end
     end
-    LI = LinearInterpolation(x_unique, y_unique)
+    LI = linear_interpolation(x_unique, y_unique)
     return LI
 end
 
@@ -393,7 +393,7 @@ end
         1:2,
     )
     nodesitp, valsitp = [itp(t, 1) for t in ti], [itp(t, 2) for t in ti]
-    return LinearInterpolation(nodesitp, valsitp)
+    return linear_interpolation(nodesitp, valsitp)
 end
 
 @inline function T_air(t_var, ::PassiveHouseEquations1D)
@@ -417,7 +417,7 @@ end
 end
 
 @inline function I_s(x_var, equations::PassiveHouseEquations1D)
-    LI = LinearInterpolation(
+    LI = linear_interpolation(
         [
             0.0,
             equations.xa - 1e-8,
@@ -441,7 +441,7 @@ end
     t_var = t_var / (86400 / equations.tᵣ)
     xs=[0, 7, 10.5, 12, 13, 15, 16.5, 18.5, 24] ./ 24;
     ys=([-10, -10, 0.3 * z, 0.6 * z, z, z, 0, -10, -10]) ./ z;
-    LI=LinearInterpolation(xs, ys);
+    LI=linear_interpolation(xs, ys);
     return LI(t_var)
 end
 

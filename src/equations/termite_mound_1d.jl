@@ -95,7 +95,7 @@ struct TermiteMoundEquations1D{RealT<:Real} <: AbstractEquations{1,5}
         t_ref=0.0033582989242263127,
         T0=27.0,
         v0=-2.219,
-        Ti_LI=LinearInterpolation([0.0, 0.5, 1.0], [27.6, 28.8, 27.5]),
+        Ti_LI=linear_interpolation([0.0, 0.5, 1.0], [27.6, 28.8, 27.5]),
     )
         γ, inv_gamma_minus_one = promote(γ, inv(γ - 1.0))
         new{typeof(β)}(
@@ -197,7 +197,7 @@ end
 
 @inline function h(x, equations::TermiteMoundEquations1D)
     #xb = (sqrt(0.09 + equations.r*r) + sqrt(r*r + h*h)) / L
-    LI = LinearInterpolation(
+    LI = linear_interpolation(
         [0.0, equations.xa, equations.xb, 1.0],
         [0.0, 0.3, equations.h + 0.3, 0.0],
     )
@@ -251,7 +251,7 @@ end
     )
 end
 
-@inline function LinearInterpolation2(x, y, ::TermiteMoundEquations1D)
+@inline function linear_interpolation2(x, y, ::TermiteMoundEquations1D)
     iunique_indices = unique!(collect(zip(x, y)))[2]
     x_unique = []
     y_unique = []
@@ -265,7 +265,7 @@ end
             seen[xi] = true
         end
     end
-    LI = LinearInterpolation(x_unique, y_unique)
+    LI = linear_interpolation(x_unique, y_unique)
     return LI
 end
 
@@ -330,7 +330,7 @@ end
         1:2,
     )
     nodesitp, valsitp = [itp(t, 1) for t in ti], [itp(t, 2) for t in ti]
-    return LinearInterpolation(nodesitp, valsitp)
+    return linear_interpolation(nodesitp, valsitp)
 end
 
 @inline function T_air(t_var, equations::TermiteMoundEquations1D)

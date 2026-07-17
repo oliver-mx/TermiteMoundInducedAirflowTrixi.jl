@@ -165,7 +165,7 @@
             F = sum((f) .* weights)
             I_inv .* F
         end
-        LI = LinearInterpolation([t_prev, t_now], [v_dt_prev, v_dt],
+        LI = linear_interpolation([t_prev, t_now], [v_dt_prev, v_dt],
                                  extrapolation_bc = Line())
         prob = ODEProblem((u, p, t) -> LI(t), v_prev, (t_prev, t_now))
         sol = solve(prob,
@@ -179,13 +179,13 @@
         c = sum((Q .* A_nodes) .* weights)
         I_0 = cumsum((Q .* A_nodes .- c) .* weights)
         v1 = v .* A_nodes_inv .+ A_nodes_inv .* I_0
-        v1_LI = LinearInterpolation2(nodes, v1, equations)
+        v1_LI = linear_interpolation2(nodes, v1, equations)
         v1_dx = [Interpolations.gradient(v1_LI, nodes[i])[1] for i in 1:L_nodes]
         #------------------------
         p0_dt = .- equations.γ .* p0 .* v1_dx .- equations.γ .* A_x_nodes ./ A_nodes .* v1 .* p0 .-
                 I_w_nodes .* equations.k_w .* A_sqrt_A_inv .* (T .- Tu)
         p0_dt = sum(p0_dt) / length(p0_dt)
-        LI = LinearInterpolation([t_prev, t_now], [p0_dt_prev, p0_dt],
+        LI = linear_interpolation([t_prev, t_now], [p0_dt_prev, p0_dt],
                                  extrapolation_bc = Line())
         prob = ODEProblem((u, p, t) -> LI(t), p0_prev[1], (t_prev, t_now))
         sol = solve(prob, CarpenterKennedy2N54(williamson_condition = false),
