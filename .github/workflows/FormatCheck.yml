@@ -1,6 +1,10 @@
-name: Format suggestions
+name: Format-suggestions
 
 on: [pull_request, workflow_dispatch]
+
+permissions:
+  actions: read
+  contents: read
 
 jobs:
   code-style:
@@ -8,5 +12,5 @@ jobs:
     steps:
       - uses: julia-actions/julia-format@v3
         with:
-          version: '1.0.45'
-          fail_level: error
+          version: '1.12.6'
+          suggestion-label: 'format-suggestions'
