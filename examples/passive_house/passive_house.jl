@@ -1,10 +1,24 @@
 using TermiteMoundInducedAirflowTrixi
-using Trixi, Trixi2Vtk, OrdinaryDiffEqLowStorageRK, Interpolations, QuadGK,
-      FastGaussQuadrature, Plots
+using Trixi,
+    Trixi2Vtk,
+    OrdinaryDiffEqLowStorageRK,
+    Interpolations,
+    QuadGK,
+    FastGaussQuadrature,
+    Plots
 using Trixi: AbstractEquations, @muladd
 import Interpolations: Line
-import Trixi: flux_ranocha, ln_mean, inv_ln_mean, flux, varnames, cons2cons, cons2prim,
-              prim2cons, cons2entropy, max_abs_speeds
+import Trixi:
+    flux_ranocha,
+    ln_mean,
+    inv_ln_mean,
+    flux,
+    varnames,
+    cons2cons,
+    cons2prim,
+    prim2cons,
+    cons2entropy,
+    max_abs_speeds
 import TermiteMoundInducedAirflowTrixi: PassiveHouseInitialCondition, source_terms
 
 ###############################################################################
@@ -15,14 +29,27 @@ initial_condition = PassiveHouseInitialCondition
 volume_flux = flux_ranocha
 surface_flux = flux_ranocha
 
-dg = DGSEM(polydeg = 4, surface_flux = flux_ranocha,
-           volume_integral = VolumeIntegralFluxDifferencing(volume_flux))
+dg = DGSEM(
+    polydeg = 4,
+    surface_flux = flux_ranocha,
+    volume_integral = VolumeIntegralFluxDifferencing(volume_flux),
+)
 
-mesh = TreeMesh((0.0,), (1.0,), initial_refinement_level = 6, n_cells_max = 1000,
-                periodicity = true)
+mesh = TreeMesh(
+    (0.0,),
+    (1.0,),
+    initial_refinement_level = 6,
+    n_cells_max = 1000,
+    periodicity = true,
+)
 
-semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, dg,
-                                    source_terms = source_terms);
+semi = SemidiscretizationHyperbolic(
+    mesh,
+    equations,
+    initial_condition,
+    dg,
+    source_terms = source_terms,
+);
 
 ###############################################################################
 # ODE solvers, callbacks etc.
@@ -38,8 +65,13 @@ callbacks = CallbackSet(summary_callback, stepsize_callback, update_velocity_cal
 ###############################################################################
 # run the simulation
 
-sol = solve(ode, CarpenterKennedy2N54(williamson_condition = false); dt = 1.0,
-            ode_default_options()..., callback = callbacks);
+sol = solve(
+    ode,
+    CarpenterKennedy2N54(williamson_condition = false);
+    dt = 1.0,
+    ode_default_options()...,
+    callback = callbacks,
+);
 
 #pd = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi); plot(pd)
 #pd = PlotData1D(sol); plot(pd)

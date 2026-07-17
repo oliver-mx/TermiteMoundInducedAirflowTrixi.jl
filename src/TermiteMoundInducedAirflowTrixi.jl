@@ -9,8 +9,17 @@ using FastGaussQuadrature
 using MuladdMacro: @muladd
 using Trixi: AbstractEquations
 import Interpolations: Line
-import Trixi: flux_ranocha, ln_mean, inv_ln_mean, flux, varnames, cons2cons, cons2prim,
-              prim2cons, cons2entropy, max_abs_speeds
+import Trixi:
+    flux_ranocha,
+    ln_mean,
+    inv_ln_mean,
+    flux,
+    varnames,
+    cons2cons,
+    cons2prim,
+    prim2cons,
+    cons2entropy,
+    max_abs_speeds
 
 include("equations/equations.jl")
 include("callback_step/callback_step.jl")
