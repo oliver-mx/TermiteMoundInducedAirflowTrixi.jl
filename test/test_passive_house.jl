@@ -21,7 +21,6 @@ isdir(outdir) && rm(outdir, recursive = true)
     # (e.g., from type instabilities)
     @test_allocations(Trixi.rhs!, semi, sol, 1000000)
 end
-
 end # PasiiveHouse1D
 
 end # module

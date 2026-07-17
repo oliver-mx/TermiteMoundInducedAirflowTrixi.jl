@@ -23,5 +23,4 @@ const TRIXI_TEST = get(ENV, "TRIXI_TEST", "all")
             end
         end
     end
-
 end
