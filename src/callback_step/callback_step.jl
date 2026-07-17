@@ -9,5 +9,4 @@
 # Include files with actual implementations for different systems of equations. 
 
 include("update_velocity.jl")
-
 end # @muladd
