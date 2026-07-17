@@ -2,19 +2,27 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
     tags: ['*']
+    paths-ignore:
+      - 'LICENSE.md'
+      - 'README.md'
   pull_request:
+    paths-ignore:
+      - 'LICENSE.md'
+      - 'README.md'
   workflow_dispatch:
+
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
 jobs:
   test:
     if: "!contains(github.event.head_commit.message, 'skip ci')"
-    name: ${{ matrix.trixi_test }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -23,58 +31,23 @@ jobs:
           - '1.10'
         os:
           - ubuntu-latest
-        arch:
-          - x64
-        trixi_test:
-          - termite_mound
-          - passive_house
-          - upstream
-        include:
-          - version: '1.10'
-            os: macos-latest
-            arch: aarch64
-            trixi_test: upstream
-          - version: '1.10'
-            os: windows-latest
-            arch: x64
-            trixi_test: upstream
+          - macos-latest
+          - windows-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@v3
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
       - run: julia -e 'using InteractiveUtils; versioninfo(verbose=true)'
-      - uses: julia-actions/cache@v3
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
-      - name: Run tests
-        uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-processcoverage@v1
         with:
-          coverage: true
-        env:
-          PYTHON: ""
-          TRIXI_TEST: ${{ matrix.trixi_test }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # for authenticated downloads without strict rate limits
-      - name: Process coverage results
-        uses: julia-actions/julia-processcoverage@v1
-        if: ${{ !cancelled() }}
-        with:
-          directories: src,examples
-      - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v7
-        if: ${{ !cancelled() }}
+          directories: src
+      - uses: codecov/codecov-action@v4
         with:
           files: lcov.info
+          directory: ${{ github.workspace }}
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} # now required for public repos
-      # Workaround for https://github.com/coverallsapp/github-action/issues/264
-      - name: Trust Coveralls Homebrew tap (Homebrew 6 requirement)
-        if: runner.os == 'macOS'
-        run: brew trust coverallsapp/coveralls
-      - name: Upload coverage report to Coveralls
-        uses: coverallsapp/github-action@v2
-        if: ${{ !cancelled() }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./lcov.info
-          format: lcov
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

@@ -2,23 +2,23 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directory: "/" # Location of package manifests
     schedule:
-      interval: "weekly"
-    # To group all GitHub Actions updates into a single PR, uncomment the following:
-    # groups:
-    #   github-actions:
-    #     patterns:
-    #       - "*"
+      interval: "monthly"
+    groups:
+      # Group all GitHub Actions PRs into a single PR:
+      all-github-actions:
+        patterns:
+          - "*"
   - package-ecosystem: "julia"
-    directories:
+    directories: # Location of Julia projects
       - "/"
       - "/docs"
       - "/test"
     schedule:
-      interval: "weekly"
-    # To group all Julia dependency updates into a single PR, uncomment the following:
-    # groups:
-    #   julia-dependencies:
-    #     patterns:
-    #       - "*"
+      interval: "daily"
+    groups:
+      # Group all Julia package updates into a single PR:
+      all-julia-dependencies:
+        patterns:
+          - "*"
