@@ -139,6 +139,7 @@
         Tu = [T_u(t_now, x, y, equations) * equations.t_ref for (x, y) in zip(nodes, Ti)]
         #-----------------------
         ### Explixit velocity time step via CarpenterKennedy2N54() ###
+        v_exp = v_prev + integrator.dt * v_dt_prev
         v1_exp = v1_prev .+ (v_exp - v_prev) / A(0.0, equations)
         v1_dx_exp = v1_dx_prev
         I_inv = inv.(sum((rho .* A_nodes_inv) .* weights))
