@@ -180,41 +180,20 @@ end
     return x
 end
 
-@inline function time2scaled(y, equations::PassiveHouseEquations1D)
-    return y * (3600 / equations.tᵣ)
-end
-
-@inline function space2unscaled(x, equations::PassiveHouseEquations1D)
-    return equations.L .* x
-end
-
-@inline function temp2unscaled(x, equations::PassiveHouseEquations1D)
-    z = 273.15
-    return x .* equations.T_ref .- z
-end
-
-@inline function vel2unscaled(x, equations::PassiveHouseEquations1D)
-    return x .* equations.uᵣ * 100
-end
-
-@inline function time2unscaled(x, equations::PassiveHouseEquations1D)
-    return x ./ (3600 / equations.tᵣ)
-end
-
-@inline function h(x, equations::PassiveHouseEquations1D)
-    k = 35.0
-    x1 = 0.2558139534883721
-    x2 = 0.5116279069767442
-    x3 = 0.7558139534883721
-    A1 = 0.0
-    A2 = 5.0 / equations.L
-    A3 = 4.5 / equations.L
-    s1 = 1 / (1 + exp(-k * (x - x1)))
-    s2 = 1 / (1 + exp(-k * (x - x2)))
-    s3 = 1 / (1 + exp(-k * (x - x3)))
-    y = A1 * (1 - s1) + A2 * (s1 - s2) + A3 * (s2 - s3)
-    return y
-end
+#@inline function h(x, equations::PassiveHouseEquations1D)
+#    k = 35.0
+#    x1 = 0.2558139534883721
+#    x2 = 0.5116279069767442
+#    x3 = 0.7558139534883721
+#    A1 = 0.0
+#    A2 = 5.0 / equations.L
+#    A3 = 4.5 / equations.L
+#    s1 = 1 / (1 + exp(-k * (x - x1)))
+#    s2 = 1 / (1 + exp(-k * (x - x2)))
+#    s3 = 1 / (1 + exp(-k * (x - x3)))
+#    y = A1 * (1 - s1) + A2 * (s1 - s2) + A3 * (s2 - s3)
+#    return y
+#end
 
 @inline function h_x(x, equations::PassiveHouseEquations1D)
     k = 35.0

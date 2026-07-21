@@ -174,35 +174,13 @@ end
     return inv(equations.uᵣ * 100) .* y
 end
 
-@inline function time2scaled(y, equations::TermiteMoundEquations1D)
-    return y * (3600/equations.tᵣ)
-end
-
-@inline function space2unscaled(x, equations::TermiteMoundEquations1D)
-    return equations.L .* x
-end
-
-@inline function temp2unscaled(x, equations::TermiteMoundEquations1D)
-    z = 273.15
-    return x .* equations.T_ref .- z
-end
-
-@inline function vel2unscaled(x, equations::TermiteMoundEquations1D)
-    return x .* equations.uᵣ * 100
-end
-
-@inline function time2unscaled(x, equations::TermiteMoundEquations1D)
-    return x ./ (3600/equations.tᵣ)
-end
-
-@inline function h(x, equations::TermiteMoundEquations1D)
-    #xb = (sqrt(0.09 + equations.r*r) + sqrt(r*r + h*h)) / L
-    LI = linear_interpolation(
-        [0.0, equations.xa, equations.xb, 1.0],
-        [0.0, 0.3, equations.h + 0.3, 0.0],
-    )
-    return LI(x)
-end
+#@inline function h(x, equations::TermiteMoundEquations1D)
+#    LI = linear_interpolation(
+#        [0.0, equations.xa, equations.xb, 1.0],
+#        [0.0, 0.3, equations.h + 0.3, 0.0],
+#    )
+#    return LI(x)
+#end
 
 @inline function h_x(x, equations::TermiteMoundEquations1D)
     dy = if x < equations.xa
