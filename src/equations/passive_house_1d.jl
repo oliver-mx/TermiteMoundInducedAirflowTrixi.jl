@@ -277,22 +277,6 @@ end
     )
 end
 
-@inline function T_u_dt(t_var, x_var, Ti_dt, equations::PassiveHouseEquations1D)
-    ϵ0 = 0.5
-    ϵ1 = 0.1
-    t_var = mod(t_var, 86400/equations.tᵣ)
-    t_var = t_var/(86400/equations.tᵣ/24)
-    c0_dt = dt_T_air(t_var, equations)
-    c1_dt = dt_T_soil(t_var, equations)
-    c2_dt = ϵ0 * c0_dt + (1.0 - ϵ0) * Ti_dt
-    c3_dt = ϵ1 * c0_dt + (1.0 - ϵ1) * Ti_dt
-    return ifelse(
-        (x_var ≤ equations.xa) || (x_var ≥ equations.xc),
-        c1_dt,
-        ifelse(x_var ≤ equations.xb, c2_dt, c3_dt),
-    )
-end
-
 @inline function linear_interpolation2(x, y, ::PassiveHouseEquations1D)
     iunique_indices = unique!(collect(zip(x, y)))[2]
     x_unique = []
@@ -311,60 +295,6 @@ end
     return LI
 end
 
-@inline function Fourir(
-    a0,
-    a1,
-    a2,
-    a3,
-    a4,
-    a5,
-    a6,
-    a7,
-    a8,
-    a9,
-    a10,
-    t_var,
-    ::PassiveHouseEquations1D,
-)
-    return a0 +
-           a1 * cos(pi * t_var / 12.0) +
-           a2 * sin(pi * t_var / 12.0) +
-           a3 * cos(pi * t_var / 6.0) +
-           a4 * sin(pi * t_var / 6.0) +
-           a5 * cos(pi * t_var / 4.0) +
-           a6 * sin(pi * t_var / 4.0) +
-           a7 * cos(pi * t_var / 3.0) +
-           a8 * sin(pi * t_var / 3.0) +
-           a9 * cos(pi * t_var / 2.4) +
-           a10 * sin(pi * t_var / 2.4)
-end
-
-@inline function dt_Fourir(
-    a1,
-    a2,
-    a3,
-    a4,
-    a5,
-    a6,
-    a7,
-    a8,
-    a9,
-    a10,
-    t_var,
-    ::PassiveHouseEquations1D,
-)
-    return - a1 .* sin(pi * t_var / 12.0) .* (pi / 12.0) +
-           a2 * cos(pi * t_var / 12.0) * (pi / 12.0) -
-           a3 * sin(pi * t_var / 6.0) * (pi / 6.0) +
-           a4 * cos(pi * t_var / 6.0) * (pi / 6.0) -
-           a5 * sin(pi * t_var / 4.0) * (pi / 4.0) +
-           a6 * cos(pi * t_var / 4.0) * (pi / 4.0) -
-           a7 * sin(pi * t_var / 3.0) * (pi / 3.0) +
-           a8 * cos(pi * t_var / 3.0) * (pi / 3.0) -
-           a9 * sin(pi * t_var / 2.4) * (pi / 2.4) +
-           a10 * cos(pi * t_var / 2.4) .* (pi / 2.4)
-end
-
 @inline function bspline2linear(nodes, vals, t, ti, ::PassiveHouseEquations1D)
     itp = Interpolations.scale(
         interpolate(hcat(nodes, vals), (BSpline(Cubic(Natural(OnGrid()))), NoInterp())),
@@ -379,16 +309,8 @@ end
     return -3.9499999999999997 * sin((t_var + 4) * 2 * pi / 24) + 277.95
 end
 
-@inline function dt_T_air(t_var, ::PassiveHouseEquations1D)
-    return -3.9499999999999997 * (2 * pi / 24) * cos((t_var + 4) * 2 * pi / 24)
-end
-
 @inline function T_soil(t_var, ::PassiveHouseEquations1D)
     return 284.15
-end
-
-@inline function dt_T_soil(t_var, ::PassiveHouseEquations1D)
-    return 0.0
 end
 
 @inline function I_w(x_var, ::PassiveHouseEquations1D)

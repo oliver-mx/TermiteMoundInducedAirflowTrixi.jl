@@ -131,7 +131,6 @@
         #-----------------------
         rho = integrator.u[1:5:(end - 4)]
         if any(isnan, rho)
-            println(rho)
             error("NaN detected in rho!")
         end
         Ti = integrator.u[4:5:(end - 1)]
@@ -140,31 +139,15 @@
         Tu = [T_u(t_now, x, y, equations) * equations.t_ref for (x, y) in zip(nodes, Ti)]
         #-----------------------
         ### Explixit velocity time step via CarpenterKennedy2N54() ###
-        direction_prev = sign(v_prev)
-        v_exp = v_prev + integrator.dt * v_dt_prev
-        direction_exp = sign(v_exp)
-        v_dt = if direction_prev == direction_exp
-            v1_exp = v1_prev .+ (v_exp - v_prev) / A(0.0, equations)
-            v1_dx_exp = v1_dx_prev
-            I_inv = inv.(sum((rho .* A_nodes_inv) .* weights))
-            f = - rho .* v1_exp .* v1_dx_exp -
-                beta .* rho .* v1_exp .*
-                (equations.η .- (1 - equations.η) .* abs.(v1_exp)) -
-                h_x.(nodes, equations) .* (rho .- equations.ρₕ₀) ./ equations.Fr²
-            F = sum((f) .* weights)
-            I_inv .* F
-        else
-            v1_exp = reverse(- v1_prev .+ (v_exp + v_prev) / A(0.0, equations))
-            v1_exp_LI = bspline2linear(nodes, v1_exp, t, ti, equations)
-            v1_dx_exp = [Interpolations.gradient(v1_exp_LI, nodes[i])[1] for i in 1:L_nodes]
-            I_inv = inv.(sum((rho .* A_nodes_inv) .* weights))
-            f = - rho .* v1_exp .* v1_dx_exp -
-                beta .* rho .* v1_exp .*
-                (equations.η .- (1 - equations.η) .* abs.(v1_exp)) -
-                h_x.(nodes, equations) .* (rho .- equations.ρₕ₀) ./ equations.Fr²
-            F = sum((f) .* weights)
-            I_inv .* F
-        end
+        v1_exp = v1_prev .+ (v_exp - v_prev) / A(0.0, equations)
+        v1_dx_exp = v1_dx_prev
+        I_inv = inv.(sum((rho .* A_nodes_inv) .* weights))
+        f = - rho .* v1_exp .* v1_dx_exp -
+            beta .* rho .* v1_exp .*
+            (equations.η .- (1 - equations.η) .* abs.(v1_exp)) -
+            h_x.(nodes, equations) .* (rho .- equations.ρₕ₀) ./ equations.Fr²
+        F = sum((f) .* weights)
+        v_dt = I_inv .* F
         LI = linear_interpolation([t_prev, t_now], [v_dt_prev, v_dt],
                                  extrapolation_bc = Line())
         prob = ODEProblem((u, p, t) -> LI(t), v_prev, (t_prev, t_now))

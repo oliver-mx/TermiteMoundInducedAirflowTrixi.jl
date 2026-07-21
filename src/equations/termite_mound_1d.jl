@@ -215,20 +215,6 @@ end
     )
 end
 
-@inline function T_u_dt(t_var, x_var, Ti_dt, equations::TermiteMoundEquations1D)
-    t_var = mod(t_var, 86400 / equations.tᵣ)
-    t_var = t_var/(86400 / equations.tᵣ / 24)
-    c0_dt = dt_T_air(t_var, equations)
-    c1_dt = dt_T_soil(t_var, equations)
-    c2_dt = 0.5f0 * (c0_dt + Ti_dt)
-    c3_dt = Ti_dt
-    return ifelse(
-        (x_var ≤ equations.xa) || (x_var ≥ equations.xc),
-        c1_dt,
-        ifelse(x_var ≤ equations.xb, c2_dt, c3_dt),
-    )
-end
-
 @inline function linear_interpolation2(x, y, ::TermiteMoundEquations1D)
     iunique_indices = unique!(collect(zip(x, y)))[2]
     x_unique = []
@@ -275,32 +261,6 @@ end
            a10 * sin(pi * t_var / 2.4)
 end
 
-@inline function dt_Fourir(
-    a1,
-    a2,
-    a3,
-    a4,
-    a5,
-    a6,
-    a7,
-    a8,
-    a9,
-    a10,
-    t_var,
-    ::TermiteMoundEquations1D,
-)
-    return - a1 .* sin(pi * t_var / 12.0) .* (pi / 12.0) +
-           a2 * cos(pi * t_var / 12.0) * (pi / 12.0) -
-           a3 * sin(pi * t_var / 6.0) * (pi / 6.0) +
-           a4 * cos(pi * t_var / 6.0) * (pi / 6.0) -
-           a5 * sin(pi * t_var / 4.0) * (pi / 4.0) +
-           a6 * cos(pi * t_var / 4.0) * (pi / 4.0) -
-           a7 * sin(pi * t_var / 3.0) * (pi / 3.0) +
-           a8 * cos(pi * t_var / 3.0) * (pi / 3.0) -
-           a9 * sin(pi * t_var / 2.4) * (pi / 2.4) +
-           a10 * cos(pi * t_var / 2.4) .* (pi / 2.4)
-end
-
 @inline function bspline2linear(nodes, vals, t, ti, ::TermiteMoundEquations1D)
     itp = Interpolations.scale(
         interpolate(hcat(nodes, vals), (BSpline(Cubic(Natural(OnGrid()))), NoInterp())),
@@ -340,33 +300,6 @@ end
     )
 end
 
-@inline function dt_T_air(t_var, equations::TermiteMoundEquations1D)
-    a1 = -2.627;
-    a10 = -0.03607;
-    a2 = -6.092;
-    a3 = 0.4451;
-    a4 = 0.2248;
-    a5 = -0.5704;
-    a6 = 0.2365;
-    a7 = 0.02813;
-    a8 = -0.4064;
-    a9 = -0.07545
-    return dt_Fourir(
-        a1,
-        a2,
-        a3,
-        a4,
-        a5,
-        a6,
-        a7,
-        a8,
-        a9,
-        a10,
-        t_var,
-        equations::TermiteMoundEquations1D,
-    )
-end
-
 @inline function T_soil(t_var, equations::TermiteMoundEquations1D)
     a0 = 302.9;
     a1 = 1.413;
@@ -381,34 +314,6 @@ end
     a9 = -0.002245
     return Fourir(
         a0,
-        a1,
-        a2,
-        a3,
-        a4,
-        a5,
-        a6,
-        a7,
-        a8,
-        a9,
-        a10,
-        t_var,
-        equations::TermiteMoundEquations1D,
-    )
-end
-
-@inline function dt_T_soil(t_var, equations::TermiteMoundEquations1D)
-    a0 = 302.9;
-    a1 = 1.413;
-    a10 = -0.005461;
-    a2 = -0.09037;
-    a3 = -0.08303;
-    a4 = -0.2159;
-    a5 = -0.01125;
-    a6 = 0.01467;
-    a7 = -0.0008037;
-    a8 = -0.01079;
-    a9 = -0.002245
-    return dt_Fourir(
         a1,
         a2,
         a3,
