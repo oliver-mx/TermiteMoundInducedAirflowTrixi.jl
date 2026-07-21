@@ -51,13 +51,3 @@ jobs:
           directory: ${{ github.workspace }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - name: Trust Coveralls Homebrew tap (Homebrew 6 requirement)
-        if: runner.os == 'macOS'
-        run: brew trust coverallsapp/coveralls
-      - name: Upload coverage report to Coveralls
-        uses: coverallsapp/github-action@v2
-        if: ${{ !cancelled() }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./lcov.info
-          format: lcov
