@@ -22,6 +22,11 @@ concurrency:
 
 jobs:
   build:
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: read
+      statuses: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -41,3 +46,10 @@ jobs:
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
           GKSwstype: 100 # To make GitHub Action work, disable showing a plot window with the GR backend of the Plots package
         run: julia --project=docs --color=yes docs/make.jl
+      - name: Run doctests
+        run: |
+          julia --project=docs --color=yes -e '
+            using Documenter: DocMeta, doctest
+            using TermiteMoundInducedAirflowTrixi
+            DocMeta.setdocmeta!(TermiteMoundInducedAirflowTrixi, :DocTestSetup, :(using TermiteMoundInducedAirflowTrixi); recursive=true)
+            doctest(TermiteMoundInducedAirflowTrixi)'
