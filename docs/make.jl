@@ -10,14 +10,14 @@ DocMeta.setdocmeta!(
 
 makedocs(;
     modules = [TermiteMoundInducedAirflowTrixi],
-    authors = "oliver-mx <oliver-mx@uni-hamburg.de>",
+    authors = "Oliver Peter Marx <oliver-mx@uni-hamburg.de>",
     sitename = "TermiteMoundInducedAirflowTrixi.jl",
     format = Documenter.HTML(;
-        canonical = "https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl",
+        canonical = "https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl",
         edit_link = "master",
         assets = String[],
     ),
-    pages=["Home" => "index.md"],
+    pages = ["Home" => "index.md"],
 )
 
 deploydocs(;

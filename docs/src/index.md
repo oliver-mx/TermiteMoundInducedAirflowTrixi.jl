@@ -1,7 +1,3 @@
-```@meta
-CurrentModule = TermiteMoundInducedAirflowTrixi
-```
-
 # TermiteMoundInducedAirflowTrixi
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/)
@@ -69,10 +65,3 @@ TermiteMoundInducedAirflowTrixi.jl is maintained by [Oliver P. Marx](https://git
 
 ## License
 TermiteMoundInducedAirflowTrixi.jl is licensed under the MIT license (see [LICENSE.md](LICENSE.md)).
-
-```@index
-```
-
-```@autodocs
-Modules = [TermiteMoundInducedAirflowTrixi]
-```
