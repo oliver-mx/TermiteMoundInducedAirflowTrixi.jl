@@ -17,7 +17,7 @@ makedocs(;
         edit_link = "master",
         assets = String[],
     ),
-    pages=["Home" => "index.md", "Installation" => "installation.md", "Tutorial" => "tuto.md", "Mathematics" => "math.md", "License" => "license.md"],
+    pages=["Home" => "index.md", "Installation" => "installation.md", "Tutorial" => "tuto.md", "Mathematics" => "math.md"],
 )
 
 deploydocs(;

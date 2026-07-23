@@ -11,10 +11,8 @@
 
 This package provides:
 
-- **1D Termite Mound Model**: This thermo fluid dynamic model describes the airflow dynamics inside of termite mounds. The one-dimensional mathematicalmodel originates from the Euler equations of gas dynamics in a low Mach number regime. 
-  
-  More details about this model can be found in the publication:  
-  **[[Article](...)]**
+- **1D Termite Mound Model**: This thermo fluid dynamic model describes the airflow dynamics inside of termite mounds. The one-dimensional mathematicalmodel originates from the Euler equations of gas dynamics in a low Mach number regime:
+
 ```math
 	\begin{equation}
 		\frac{\partial \rho}{\partial t} + \frac{\partial \left( \rho u\right)}{\partial x} = - \frac{\textrm{A}_x}{\textrm{A}}\rho u 
@@ -47,10 +45,8 @@ This package provides:
 	\end{equation}
 ```
 
-- **1D Passive House Model**: This model is an extension of the `1D Termite Mound Model`. It also considers radiant flux, therefore modelling the greenhouse effect.
+- **1D Passive House Model**: This model is an extension of the `1D Termite Mound Model`. It also considers radiant flux, therefore modelling the greenhouse effect:
   
-  More details about this model can be found in the publication:  
-  **[[Article](...)]**
 ```math
 	\begin{equation}
 		\frac{\partial \rho}{\partial t} + \frac{\partial \left( \rho u\right)}{\partial x} = - \frac{\textrm{A}_x}{\textrm{A}}\rho u 
@@ -83,7 +79,9 @@ This package provides:
 	\end{equation}
 ```
 
-Both models were designed to be used with **[Trixi.jl](https://github.com/trixi-framework/Trixi.jl)**, a flexible and high-performance framework for solving systems of conservation laws using the Discontinuous Galerkin (DG) method.
+More details about the models can be found in the publication:  **[[Article](...)]**
+
+Both models are designed to be used with **[Trixi.jl](https://github.com/trixi-framework/Trixi.jl)**, a flexible and high-performance framework for solving systems of conservation laws using the Discontinuous Galerkin (DG) method.
 
 ## Installation
 If you have not yet installed Julia, please [follow the instructions for your
