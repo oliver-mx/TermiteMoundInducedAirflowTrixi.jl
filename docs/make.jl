@@ -22,25 +22,5 @@ makedocs(;
 
 deploydocs(;
     repo = "github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl",
-    devbranch = "main",
-)
-
-makedocs(;
-    modules = [TermiteMoundInducedAirflowTrixi],
-    authors = "Oliver Peter Marx <oliver-mx@uni-hamburg.de>",
-    sitename = "TermiteMoundInducedAirflowTrixi.jl",
-    format = Documenter.HTML(;
-        canonical = "https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl",
-        edit_link = "master",
-        assets = String[],
-    ),
-    pages = ["Home" => "index.md", 
-        "Installation" => "installation.md",
-        "Introduction" => "introduction.md",
-        "License" => "license.md",
-        "Reference" => "reference.md"],)
-
-deploydocs(;
-    repo = "github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl",
     devbranch = "master",
 )
