@@ -49,6 +49,7 @@ semi = SemidiscretizationHyperbolic(
     initial_condition,
     dg,
     source_terms = source_terms,
+    boundary_conditions = boundary_condition_periodic,
 );
 
 ###############################################################################

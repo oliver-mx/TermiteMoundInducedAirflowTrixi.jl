@@ -50,6 +50,7 @@ semi = SemidiscretizationHyperbolic(
     initial_condition,
     dg,
     source_terms = source_terms,
+    boundary_conditions = boundary_condition_periodic,
 );
 
 ###############################################################################
@@ -76,4 +77,4 @@ sol = solve(
 );
 
 #pd = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi); plot(pd)
-#pd = PlotData1D(sol); plot(pd);
+#pd = PlotData1D(sol); plot(pd)
