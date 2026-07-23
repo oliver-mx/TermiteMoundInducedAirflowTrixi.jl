@@ -13,7 +13,7 @@ makedocs(;
     authors = "Oliver Peter Marx <oliver-mx@uni-hamburg.de>",
     sitename = "TermiteMoundInducedAirflowTrixi.jl",
     format = Documenter.HTML(;
-        canonical = "https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl",
+        canonical = "https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl",
         edit_link = "master",
         assets = String[],
     ),
