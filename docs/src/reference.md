@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = TrixiShallowWater
+CurrentModule = TermiteMoundInducedAirflowTrixi
 ```
 
 # TermiteMoundInducedAirflowTrixi.jl API
