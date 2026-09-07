@@ -84,7 +84,7 @@ tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ
 ode = semidiscretize(semi, tspan)
 
 summary_callback = SummaryCallback()
-stepsize_callback = StepsizeCallback(cfl = 0.4)
+stepsize_callback = StepsizeCallback(cfl = 0.3)
 update_velocity_callback =
     UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false))
 amr_controller = ControllerThreeLevel(

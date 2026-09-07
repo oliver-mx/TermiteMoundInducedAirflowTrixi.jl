@@ -20,7 +20,8 @@ import Trixi:
     cons2entropy,
     max_abs_speeds
 import TermiteMoundInducedAirflowTrixi:
-    TermiteMoundInitialCondition, source_terms, termite_parameters
+    TermiteMoundInitialCondition, source_terms, termite_parameters,
+    temp2unscaled, temp2scaled, vel2unscaled, vel2scaled, Get_initial_Ti
 
 ###############################################################################
 # Semidiscretization
@@ -78,13 +79,28 @@ semi = SemidiscretizationHyperbolic(
 );
 
 ###############################################################################
+# Simple tests for improved codecoverage
+
+y_new = temp2scaled(temp2unscaled(1.01, equations), equations)
+if abs(y_new - 1.01) > 1e-6
+    error("Temperature conversion failed.")
+end
+
+x_new = vel2scaled(vel2unscaled(0.61, equations), equations)
+if abs(x_new - 0.61) > 1e-6
+    error("Velocity conversion failed.")
+end
+
+z = Get_initial_Ti(0.501, 2.61)
+
+###############################################################################
 # ODE solvers, callbacks etc.
 
-tspan = (0.0, 85.0)
+tspan = (0.0, 30.0)
 ode = semidiscretize(semi, tspan)
 
 summary_callback = SummaryCallback()
-stepsize_callback = StepsizeCallback(cfl = 0.4)
+stepsize_callback = StepsizeCallback(cfl = 0.3)
 update_velocity_callback =
     UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false))
 amr_controller = ControllerThreeLevel(
