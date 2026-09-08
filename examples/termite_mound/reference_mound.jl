@@ -126,13 +126,13 @@ anim_rho = @animate for i ∈ 1:length(sol.t)
     pd_rho = PlotData1D(sol.u[i], semi)
     plot(pd_rho["rho"])
 end
-#gif(anim_rho, "rho.gif", fps = 5)
+#gif(anim_rho, "density.gif", fps = 5)
 
 anim_v = @animate for i ∈ 1:length(sol.t)
     pd_v = PlotData1D(sol.u[i], semi)
     plot(pd_v["v1"])
 end
-#gif(anim_v, "v.gif", fps = 5)
+#gif(anim_v, "velocity.gif", fps = 5)
 
 pd = PlotData1D(sol)
 plot(pd)
