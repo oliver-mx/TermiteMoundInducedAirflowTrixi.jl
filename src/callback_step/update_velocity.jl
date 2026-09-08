@@ -6,15 +6,16 @@
 
     @doc raw"""
         UpdateVelocityCallback(solver)
-
+    
+    
     ### Parameters
         - `solver`: ODE solver.
-
+    
     The `UpdateVelocityCallback` called after every time step.
     In this callback explicit time steps for the velocity ``v`` and pressure ``p_0`` are performed.
     For the solver we reccomend `CarpenterKennedy2N54` from `OrdinaryDiffEqLowStorageRK`.
     After the time integration, the velocity ``u`` is computed and the integrator is updated.
-
+    
     !!! note
         If the callback is not used, the quantities ``u``, ``v`` and ``p_0`` will remain constant in time!
     """
@@ -73,7 +74,7 @@
     Ensures that `UpdateVelocityCallback` is used after every time step.
 
     ### Returns
-    True.
+    Always true.
     """
     @inline function condition(u, t, integrator)
         return true

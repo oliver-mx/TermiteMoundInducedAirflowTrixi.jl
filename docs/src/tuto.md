@@ -104,17 +104,18 @@ semi = SemidiscretizationHyperbolic(
 
 We want to simulate a full day. In this case we set the time span to:
 ```julia
-tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ
-ode = semidiscretize(semi, tspan)
+tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ;
+ode = semidiscretize(semi, tspan);
 ```
 
-We presribe `CarpenterKennedy2N54` solver in the mandatory `UpdateVelocityCallback`:
+For time integrations we will always use the `CarpenterKennedy2N54` algorithim.
+Therefore, the `UpdateVelocityCallback` is defined as:
 ```julia
 update_velocity_callback =
     UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false));
 ```
 
-We complete our callback set with a `Summary`, a `Stepsize` and an `AMRCallback`:
+We add a `Summary`, `Stepsize` and `AMRCallback` to complete our callback set:
 ```julia
 summary_callback = SummaryCallback();
 stepsize_callback = StepsizeCallback(cfl = 0.3);
@@ -137,8 +138,8 @@ callbacks = CallbackSet(summary_callback, stepsize_callback, update_velocity_cal
 
 ## Run the simulation
 
-Similarly we use the `CarpenterKennedy2N54` time integration method for the PDE.
-Now, we start the simulation with the following saveat option:
+Finally, we can solve the sysstem of equations.
+We save our solution across multiple points in time.
  ```julia
 sol = solve(
     ode,
@@ -150,15 +151,19 @@ sol = solve(
 );
 ```
 
-## Plot the results
+## Solution plots
 
-We can visualize the inital states using:
+Our simulation started with a constant initial state of `rho`and `v1`.
+The leading order pressure is always constant in `x`.
+We can plot the initial state of our flow quanities using:
  ```julia
 pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi);
 plot(pd_init)
 ```
+![Initial](./initial.png)
 
-Since we saved our solution vector at different times, we can create an animation of `rho` and `u`:
+
+The time evolution of the density can be visualized using:
  ```julia
 anim_rho = @animate for i ∈ 1:length(sol.t)
     pd_rho = PlotData1D(sol.u[i], semi)
@@ -166,7 +171,10 @@ anim_rho = @animate for i ∈ 1:length(sol.t)
 end
 gif(anim_rho, "rho.gif", fps = 5)
 ```
+![Density](./density.gif)
 
+
+The velocity behaviour can be ploted similarly:
  ```julia
 anim_v = @animate for i ∈ 1:length(sol.t)
     pd_v = PlotData1D(sol.u[i], semi)
@@ -174,22 +182,12 @@ anim_v = @animate for i ∈ 1:length(sol.t)
 end
 gif(anim_v, "v.gif", fps = 5)
 ```
+![Velocity](./velocity.gif)
 
-The final state of the variables can be visualized via:
+
+The final state of the system variables can be visualized via:
  ```julia
 pd = PlotData1D(sol)
 plot(pd)
 ```
-
-## Output
-+ Initial state:
-![Initial](./initial.png)
-
-+ Density:
-![Density](./density.gif)
-
-+ Velocity:
-![Velocity](./velocity.gif)
-
-+ Final state:
 ![Final](./final.png)

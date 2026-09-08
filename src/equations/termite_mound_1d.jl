@@ -255,7 +255,7 @@ Defines the initial state of the system.
 ### Parameters
 - `x`: Position vector.
 - `t`: Time scalar.
-- `equations::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
 ### Returns
 Initial Condition as a SVector.
@@ -279,7 +279,7 @@ Defiens the source terms for the TME.
 - `u`: State vector.
 - `x`: Position vector.
 - `t`: Time scalar.
-- `equations::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
 ### Returns
 Source term as a SVector.
@@ -300,7 +300,7 @@ Converts a scaled temperature into an unscaled temperature in Celsius.
 
 ### Parameters
 - `y`: Scaled temperature.
-- `equations::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
 ### Returns
 Unscaled temperature in Celsius.
@@ -319,7 +319,7 @@ Converts an unscaled temperature (Celsius) into a scaled temperature.
 
 ### Parameters
 - `x`: Unscaled temperature in Celsius.
-- `equations::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
 ### Returns
 Scaled temperature.
@@ -336,7 +336,7 @@ Converts a scaled velocity into unscaled velocity in cm/s.
 
 ### Parameters
 - `y`: Scaled velocity.
-- `equations::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
 ### Returns
 Unscaled velocity in cm/s.
@@ -352,7 +352,7 @@ Converts an unscaled velocity (cm/s) into a scaled velocity.
 
 ### Parameters
 - `x`: Unscaled velocity.
-- `equations::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
 ### Returns
 Scaled velocity.
@@ -368,7 +368,7 @@ Defines the gradient of the height function of the flow channel.
 
 ### Parameters
 - `x`: Position vector.
-- `equations::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
 ### Returns
 Derivative of the height function.
@@ -769,7 +769,7 @@ Computes the maximum absolute speed for wave propagation.
 
 ### Parameters
 - `u`: State vector.
-- `equations::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
 ### Returns
 Maximum absolute speed.
