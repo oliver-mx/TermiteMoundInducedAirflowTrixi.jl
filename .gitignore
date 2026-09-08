@@ -20,3 +20,7 @@ coverage_report/
 /Manifest*.toml
 /docs/Manifest*.toml
 /docs/build/
+!/docs/src/density.gif
+!/docs/src/final.png
+!/docs/src/initial.png
+!/docs/src/velocity.gif
