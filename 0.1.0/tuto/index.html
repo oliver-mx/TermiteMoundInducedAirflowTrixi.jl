@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial · TermiteMoundInducedAirflowTrixi.jl</title><meta name="title" content="Tutorial · TermiteMoundInducedAirflowTrixi.jl"/><meta property="og:title" content="Tutorial · TermiteMoundInducedAirflowTrixi.jl"/><meta property="twitter:title" content="Tutorial · TermiteMoundInducedAirflowTrixi.jl"/><meta name="description" content="Documentation for TermiteMoundInducedAirflowTrixi.jl."/><meta property="og:description" content="Documentation for TermiteMoundInducedAirflowTrixi.jl."/><meta property="twitter:description" content="Documentation for TermiteMoundInducedAirflowTrixi.jl."/><meta property="og:url" content="https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/tuto/"/><meta property="twitter:url" content="https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/tuto/"/><link rel="canonical" href="https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/tuto/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">TermiteMoundInducedAirflowTrixi.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Tutorial</a><ul class="internal"><li><a class="tocitem" href="#Packages"><span>Packages</span></a></li><li><a class="tocitem" href="#Import-Functions"><span>Import Functions</span></a></li><li><a class="tocitem" href="#Equations"><span>Equations</span></a></li><li><a class="tocitem" href="#Initial-state-and-flux-functions"><span>Initial state and flux functions</span></a></li><li><a class="tocitem" href="#Semidiscretization"><span>Semidiscretization</span></a></li><li><a class="tocitem" href="#Solvers-and-callbacks"><span>Solvers and callbacks</span></a></li><li><a class="tocitem" href="#Run-the-simulation"><span>Run the simulation</span></a></li><li><a class="tocitem" href="#Solution-plots"><span>Solution plots</span></a></li></ul></li><li><a class="tocitem" href="../math/">Mathematics</a></li><li><a class="tocitem" href="../auth/">Authors</a></li><li><a class="tocitem" href="../lice/">License</a></li><li><a class="tocitem" href="../reference/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Tutorial</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Tutorial</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/blob/main/docs/src/tuto.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Tutorial-for-the-1D-Model"><a class="docs-heading-anchor" href="#Tutorial-for-the-1D-Model">Tutorial for the 1D Model</a><a id="Tutorial-for-the-1D-Model-1"></a><a class="docs-heading-anchor-permalink" href="#Tutorial-for-the-1D-Model" title="Permalink"></a></h1><p>In this section, we describe how to use <strong>TermiteMoundInducedAirflowTrixi.jl</strong> with <strong>Trixi.jl</strong>. This tutorial will guide you through setting up and running a 1D airflow simulation, including mesh creation, boundary conditions, numerical fluxes, and visualization of results.</p><h2 id="Packages"><a class="docs-heading-anchor" href="#Packages">Packages</a><a id="Packages-1"></a><a class="docs-heading-anchor-permalink" href="#Packages" title="Permalink"></a></h2><p>Before starting, ensure that the required packages are loaded:</p><pre><code class="language-julia hljs">using Pkg
+
+Pkg.add([&quot;TermiteMoundInducedAirflowTrixi&quot;, &quot;Trixi&quot;, &quot;Trixi2Vtk&quot;,
+    &quot;OrdinaryDiffEqLowStorageRK&quot;, &quot;Interpolations&quot;, &quot;QuadGK&quot;,
+    &quot;FastGaussQuadrature&quot;, &quot;Plots&quot;])
+
+using TermiteMoundInducedAirflowTrixi,
+    Trixi,
+    Trixi2Vtk,
+    OrdinaryDiffEqLowStorageRK,
+    Interpolations,
+    QuadGK,
+    FastGaussQuadrature,
+    Plots</code></pre><h2 id="Import-Functions"><a class="docs-heading-anchor" href="#Import-Functions">Import Functions</a><a id="Import-Functions-1"></a><a class="docs-heading-anchor-permalink" href="#Import-Functions" title="Permalink"></a></h2><p>Next, we need to load some functions:</p><pre><code class="language-julia hljs">using Trixi: AbstractEquations, @muladd
+import Interpolations: Line
+import Trixi:
+    flux_ranocha,
+    ln_mean,
+    inv_ln_mean,
+    flux,
+    varnames,
+    cons2cons,
+    cons2prim,
+    prim2cons,
+    cons2entropy,
+    max_abs_speeds
+import TermiteMoundInducedAirflowTrixi:
+    TermiteMoundInitialCondition, source_terms,
+    termite_parameters</code></pre><h2 id="Equations"><a class="docs-heading-anchor" href="#Equations">Equations</a><a id="Equations-1"></a><a class="docs-heading-anchor-permalink" href="#Equations" title="Permalink"></a></h2><p>First, we need to choose the parameter values for our model. The function <code>termite_parameters(r,h)</code> generates all required parameters given a radius r and height h:</p><pre><code class="language-julia hljs">radius = 0.6;
+height = 2.0;
+(γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI) =
+    termite_parameters(radius, height);
+equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h,
+    L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI);</code></pre><h2 id="Initial-state-and-flux-functions"><a class="docs-heading-anchor" href="#Initial-state-and-flux-functions">Initial state and flux functions</a><a id="Initial-state-and-flux-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Initial-state-and-flux-functions" title="Permalink"></a></h2><p>Next, we set the initial state, volume flux and surface flux functions in our equation system:</p><pre><code class="language-julia hljs">initial_condition = TermiteMoundInitialCondition;
+volume_flux = flux_ranocha;
+surface_flux = flux_ranocha;</code></pre><h2 id="Semidiscretization"><a class="docs-heading-anchor" href="#Semidiscretization">Semidiscretization</a><a id="Semidiscretization-1"></a><a class="docs-heading-anchor-permalink" href="#Semidiscretization" title="Permalink"></a></h2><p>The polynomial degree for the <code>DGSEM</code> can be specified now:</p><pre><code class="language-julia hljs">dg = DGSEM(
+    polydeg = 4,
+    surface_flux = flux_ranocha,
+    volume_integral = VolumeIntegralFluxDifferencing(volume_flux),
+);</code></pre><p>We define a one-dimensional Tree mesh, which discretizes the (scaled) spatial domain:</p><pre><code class="language-julia hljs">mesh = TreeMesh(
+    (0.0,),
+    (1.0,),
+    initial_refinement_level = 5,
+    n_cells_max = 1000,
+    periodicity = true,
+);</code></pre><p>The semidiscretization is now defined:</p><pre><code class="language-julia hljs">semi = SemidiscretizationHyperbolic(
+    mesh,
+    equations,
+    initial_condition,
+    dg,
+    source_terms = source_terms,
+    boundary_conditions = boundary_condition_periodic,
+);</code></pre><h2 id="Solvers-and-callbacks"><a class="docs-heading-anchor" href="#Solvers-and-callbacks">Solvers and callbacks</a><a id="Solvers-and-callbacks-1"></a><a class="docs-heading-anchor-permalink" href="#Solvers-and-callbacks" title="Permalink"></a></h2><p>We want to simulate a full day. In this case we set the time span to:</p><pre><code class="language-julia hljs">tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ;
+ode = semidiscretize(semi, tspan);</code></pre><p>For time integrations we will always use the <code>CarpenterKennedy2N54</code> algorithim. Therefore, the <code>UpdateVelocityCallback</code> is defined as:</p><pre><code class="language-julia hljs">update_velocity_callback =
+    UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false));</code></pre><p>We add a <code>Summary</code>, <code>Stepsize</code> and <code>AMRCallback</code> to complete our callback set:</p><pre><code class="language-julia hljs">summary_callback = SummaryCallback();
+stepsize_callback = StepsizeCallback(cfl = 0.3);
+amr_controller = ControllerThreeLevel(
+    semi,
+    IndicatorMax(semi, variable = (u, equations) -&gt; u[2]),
+    base_level = 5,
+    max_level = 6,
+    max_threshold = -0.35,
+);
+amr_callback = AMRCallback(
+    semi,
+    amr_controller,
+    interval = 1,
+    adapt_initial_condition = true,
+    adapt_initial_condition_only_refine = true,
+);
+callbacks = CallbackSet(summary_callback, stepsize_callback, update_velocity_callback);</code></pre><h2 id="Run-the-simulation"><a class="docs-heading-anchor" href="#Run-the-simulation">Run the simulation</a><a id="Run-the-simulation-1"></a><a class="docs-heading-anchor-permalink" href="#Run-the-simulation" title="Permalink"></a></h2><p>Finally, we can solve the sysstem of equations. We save our solution across multiple points in time.</p><pre><code class="language-julia hljs">sol = solve(
+    ode,
+    CarpenterKennedy2N54(williamson_condition = false);
+    dt = 1.0,
+    ode_default_options()...,
+    saveat = (tspan[end]-tspan[1])/24/2,
+    callback = callbacks,
+);</code></pre><h2 id="Solution-plots"><a class="docs-heading-anchor" href="#Solution-plots">Solution plots</a><a id="Solution-plots-1"></a><a class="docs-heading-anchor-permalink" href="#Solution-plots" title="Permalink"></a></h2><p>Our simulation started with a constant initial state of <code>rho</code>and <code>v1</code>. The leading order pressure is always constant in <code>x</code>. We can plot the initial state of our flow quanities using:</p><pre><code class="language-julia hljs">pd_init = PlotData1D((x, equations) -&gt; initial_condition(x, last(tspan), equations), semi);
+plot(pd_init)</code></pre><p><img src="../initial.png" alt="Initial"/></p><p>The time evolution of the density can be visualized using:</p><pre><code class="language-julia hljs">anim_rho = @animate for i ∈ 1:length(sol.t)
+    pd_rho = PlotData1D(sol.u[i], semi)
+    plot(pd_rho[&quot;rho&quot;])
+end
+gif(anim_rho, &quot;rho.gif&quot;, fps = 5)</code></pre><p><img src="../density.gif" alt="Density"/></p><p>The velocity behaviour can be ploted similarly:</p><pre><code class="language-julia hljs">anim_v = @animate for i ∈ 1:length(sol.t)
+    pd_v = PlotData1D(sol.u[i], semi)
+    plot(pd_v[&quot;v1&quot;])
+end
+gif(anim_v, &quot;v.gif&quot;, fps = 5)</code></pre><p><img src="../velocity.gif" alt="Velocity"/></p><p>The final state of the system variables can be visualized via:</p><pre><code class="language-julia hljs">pd = PlotData1D(sol)
+plot(pd)</code></pre><p><img src="../final.png" alt="Final"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../math/">Mathematics »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Friday 11 September 2026 12:19">Friday 11 September 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
