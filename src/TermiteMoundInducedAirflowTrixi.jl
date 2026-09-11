@@ -27,6 +27,7 @@ include("callback_step/callback_step.jl")
 # Export types/functions that define the public API of TermiteMoundInducedAirflowTrixi.jl
 export TermiteMoundEquations1D
 
-export UpdateVelocityCallback
+export UpdateVelocityCallback,
+    TermiteMoundInitialCondition, source_terms, termite_parameters
 
 end

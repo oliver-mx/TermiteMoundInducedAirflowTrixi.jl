@@ -4,6 +4,8 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/)
 [![Build Status](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml/badge.svg?)](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/graph/badge.svg?token=w06WNAQpNI)](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl)
+[![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
+[![DOI](https://zenodo.org/badge/1359143728.svg)](https://doi.org/10.5281/zenodo.22708419)
 
 **TermiteMoundInducedAirflowTrixi.jl** is a numerical simulation package focused on solving a thermo fluid dynamic model describing airflow inside of a termite mound with the discontinuous Galerkin method written in Julia. The package builds on the numerical simulation framework for conservation laws [Trixi.jl](https://github.com/trixi-framework/Trixi.jl).
 
@@ -56,11 +58,14 @@ You can copy and paste all commands to the REPL *including* the leading
 You can directly refer to TermiteMoundInducedAirflowTrixi.jl as
 
 ```bibtex
-@misc{marx2026,
+@software{marx26,
   title={{TermiteMoundInducedAirflowTrixi.jl}: {T}ermite mound airflow simulations with {T}rixi.jl},
   author={Marx, Oliver P and Gasser, Ingenuin and Schmidgall, Annika},
   year={2026},
-  doi={https://doi.org/... }
+  howpublished={\url{https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl}},
+  license = {MIT},
+  version={0.1.1},
+  doi = {https://doi.org/10.5281/zenodo.22708420}
 }
 ```
 

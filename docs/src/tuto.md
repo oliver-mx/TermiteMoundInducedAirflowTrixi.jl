@@ -24,7 +24,7 @@ using TermiteMoundInducedAirflowTrixi,
 
 ## Import Functions
 
-Next, we need to load some functions:
+Next, we load some functions from different packages:
 ```julia
 using Trixi: AbstractEquations, @muladd
 import Interpolations: Line
@@ -39,14 +39,11 @@ import Trixi:
     prim2cons,
     cons2entropy,
     max_abs_speeds
-import TermiteMoundInducedAirflowTrixi:
-    TermiteMoundInitialCondition, source_terms,
-    termite_parameters
 ```
 
 ## Equations
 
-First, we need to choose the parameter values for our model. The function `termite_parameters(r,h)` generates all required parameters given a radius r and height h:
+The first step is to set define the model parameters. The function `termite_parameters(r,h)` generates all required parameters given a radius r and a height h:
 
 ```julia
 radius = 0.6;

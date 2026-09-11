@@ -19,8 +19,6 @@ import Trixi:
     prim2cons,
     cons2entropy,
     max_abs_speeds
-import TermiteMoundInducedAirflowTrixi:
-    TermiteMoundInitialCondition, source_terms, termite_parameters
 
 ###############################################################################
 # Semidiscretization
