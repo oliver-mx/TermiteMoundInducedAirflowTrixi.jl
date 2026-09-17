@@ -1,6 +1,6 @@
 name = "TermiteMoundInducedAirflowTrixi"
 uuid = "a297ae0c-eeef-4019-a0b9-e20d9231a4a0"
-version = "1.0.0-DEV"
+version = "1.0.0"
 authors = ["Oliver Peter Marx <oliver-mx@uni-hamburg.de>"]
 
 [deps]
