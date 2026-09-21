@@ -9,15 +9,13 @@ Before starting, ensure that the required packages are loaded:
 using Pkg
 
 Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "Trixi2Vtk",
-    "OrdinaryDiffEqLowStorageRK", "Interpolations", "QuadGK",
-    "FastGaussQuadrature", "Plots"])
+    "OrdinaryDiffEqLowStorageRK", "Interpolations", "FastGaussQuadrature", "Plots"])
 
 using TermiteMoundInducedAirflowTrixi,
     Trixi,
     Trixi2Vtk,
     OrdinaryDiffEqLowStorageRK,
     Interpolations,
-    QuadGK,
     FastGaussQuadrature,
     Plots
 ```
@@ -43,7 +41,7 @@ import Trixi:
 
 ## Equations
 
-The first step is to set define the model parameters. The function `termite_parameters(r,h)` generates all required parameters given a radius r and a height h:
+The first step is to set define the model parameters. The function `termite_parameters(r,h)` generates all required parameters given a radius and a height:
 
 ```julia
 radius = 0.6;
@@ -136,7 +134,7 @@ callbacks = CallbackSet(summary_callback, stepsize_callback, update_velocity_cal
 ## Run the simulation
 
 Finally, we can solve the sysstem of equations.
-We save our solution across multiple points in time.
+The solution is saved across multiple points in time.
  ```julia
 sol = solve(
     ode,
@@ -150,8 +148,8 @@ sol = solve(
 
 ## Solution plots
 
-Our simulation started with a constant initial state of `rho`and `v1`.
-The leading order pressure is always constant in `x`.
+Our simulation started with a constant initial state of `rho` and `v1`.
+The leading order pressure `p0` is always constant in `x`.
 We can plot the initial state of our flow quanities using:
  ```julia
 pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi);
@@ -171,7 +169,7 @@ gif(anim_rho, "rho.gif", fps = 5)
 ![Density](./density.gif)
 
 
-The velocity behaviour can be ploted similarly:
+Similarly, the velocity can be plotted:
  ```julia
 anim_v = @animate for i ∈ 1:length(sol.t)
     pd_v = PlotData1D(sol.u[i], semi)

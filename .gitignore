@@ -18,6 +18,7 @@ coverage_report/
 *.jl.mem
 .vscode/
 /Manifest*.toml
+/test/Manifest*.toml
 /docs/Manifest*.toml
 /docs/build/
 !/docs/src/density.gif

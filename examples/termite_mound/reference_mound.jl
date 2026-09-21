@@ -1,11 +1,6 @@
 using TermiteMoundInducedAirflowTrixi
 using Trixi,
-    Trixi2Vtk,
-    OrdinaryDiffEqLowStorageRK,
-    Interpolations,
-    QuadGK,
-    FastGaussQuadrature,
-    Plots
+    Trixi2Vtk, OrdinaryDiffEqLowStorageRK, Interpolations, FastGaussQuadrature, Plots
 using Trixi: AbstractEquations, @muladd
 import Interpolations: Line
 import Trixi:

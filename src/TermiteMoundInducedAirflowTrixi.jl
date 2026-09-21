@@ -3,7 +3,6 @@ module TermiteMoundInducedAirflowTrixi
 using Trixi
 using OrdinaryDiffEqLowStorageRK
 using Interpolations
-using QuadGK
 using FastGaussQuadrature
 # Import additional symbols that are not exported by Trixi.jl
 using MuladdMacro: @muladd

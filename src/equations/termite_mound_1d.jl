@@ -33,11 +33,6 @@ The boundary temperature function is defined piecewise by
 ```
 It depends on the internal mound temperature ``T_i``, the soil temperature (at 30cm depth) ``T_{soil}`` and the ambient air temperature ``T_{air}``. 
 The parameters ``x_a``, ``x_b`` and ``x_c`` are fixed spatial locations along the flow channel.
-
-Reference for the TME:
-- Marx, Oliver P. and Gasser, Ingenuin and Annika Schmidgall (2026)
-  ...
-  [DOI: ...](https://doi.org/...)
 """
 struct TermiteMoundEquations1D{RealT<:Real} <: AbstractEquations{1,5}
     γ::RealT
@@ -81,7 +76,7 @@ struct TermiteMoundEquations1D{RealT<:Real} <: AbstractEquations{1,5}
         t_ref = 0.0033582989242263127,
         T0 = 27.0,
         v0 = -2.219,
-        Ti_LI = LinearInterpolation(
+        Ti_LI = linear_interpolation(
             [0.0, 0.5344827593241117, 1.0],
             [27.53453, 28.98715, 27.55033],
         ),
@@ -112,6 +107,10 @@ struct TermiteMoundEquations1D{RealT<:Real} <: AbstractEquations{1,5}
         )
     end
 end
+#Reference for the TME:
+#- Marx, Oliver P. and Gasser, Ingenuin and Annika Schmidgall (2026)
+#  ...
+#  [DOI: ...](https://doi.org/...)
 
 @doc raw"""
     termite_parameters(r, height; g=9.81, p0=1e5, R=8.314, M=0.0289652, c_v=20.85, α_w = 1.1, D0 = 0.05, ρₕ₀ = 0.982, η = 0.93, uᵣ = 0.05, ρᵣ = 1.17, pᵣ = 1, c_v_ = 790, κ = 0.184, T_ref = 297.76980029566033, t_ref = 0.0033582989242263127, T0 = 27.0, v0 = -5.0)

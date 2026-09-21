@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml/badge.svg?)](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/graph/badge.svg?token=w06WNAQpNI)](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
-[![DOI](https://zenodo.org/badge/1359143728.svg)](https://doi.org/10.5281/zenodo.22708419)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22708420)](https://doi.org/10.5281/zenodo.22708420)
 
 Documentation for [TermiteMoundInducedAirflowTrixi.jl](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl).
 
@@ -34,7 +34,7 @@ The model is designed to be used with **[Trixi.jl](https://github.com/trixi-fram
 
 If you have not yet installed Julia, please [follow the instructions for your
 operating system](https://julialang.org/downloads/platform/). 
-TermiteMoundInducedAirflowTrixi.jl works with Julia v1.12.6 and newer.
+TermiteMoundInducedAirflowTrixi.jl works with Julia v1.10 and newer.
 We recommend using the latest stable release of Julia.
 
 **TermiteMoundInducedAirflowTrixi.jl** and **Trixi.jl** can be added and installed by executing the following commands in the Julia REPL:
@@ -57,7 +57,6 @@ You can directly refer to TermiteMoundInducedAirflowTrixi.jl as
   year={2026},
   howpublished={\url{https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl}},
   license = {MIT},
-  version={0.1.1},
   doi = {https://doi.org/10.5281/zenodo.22708420}
 }
 ```

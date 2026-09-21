@@ -11,6 +11,10 @@ const TRIXI_TEST = get(ENV, "TRIXI_TEST", "all")
         include("test_termite_mound.jl")
     end
 
+    @time if TRIXI_TEST == "all" || TRIXI_TEST == "unit"
+        include("test_unit.jl")
+    end
+
     @time if TRIXI_TEST == "all" || TRIXI_TEST == "upstream"
         @testset "Namespace conflicts" begin
             # Test for namespace conflicts between TermiteMoundInducedAirflowTrixi.jl and Trixi.jl

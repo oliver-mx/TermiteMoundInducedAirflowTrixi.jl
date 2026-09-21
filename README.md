@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml/badge.svg?)](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/graph/badge.svg?token=w06WNAQpNI)](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
-[![DOI](https://zenodo.org/badge/1359143728.svg)](https://doi.org/10.5281/zenodo.22708419)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22708420)](https://doi.org/10.5281/zenodo.22708420)
 
 **TermiteMoundInducedAirflowTrixi.jl** is a numerical simulation package focused on solving a thermo fluid dynamic model describing airflow inside of a termite mound with the discontinuous Galerkin method written in Julia. The package builds on the numerical simulation framework for conservation laws [Trixi.jl](https://github.com/trixi-framework/Trixi.jl).
 
@@ -31,25 +31,24 @@ The model is designed to be used with **[Trixi.jl](https://github.com/trixi-fram
 ## Installation
 If you have not yet installed Julia, please [follow the instructions for your
 operating system](https://julialang.org/downloads/platform/). TermiteMoundInducedAirflowTrixi.jl works
-with Julia v1.12.6 and newer. We recommend using the latest stable release of Julia.
+with Julia v1.10 and newer. We recommend using the latest stable release of Julia.
 
 TermiteMoundInducedAirflowTrixi.jl and its related tools are registered Julia packages. 
 Below is a list of relevant packages and sub-packages:
 
 * [Trixi.jl](https://github.com/trixi-framework/Trixi.jl)
 * [Trixi2Vtk.jl](https://github.com/trixi-framework/Trixi2Vtk.jl)
-* [OrdinaryDiffEqLowStorageRK.jl](https://github.com/SciML/OrdinaryDiffEq.jl)
-* [Interpolations.jl](https://github.com/JuliaMath/Interpolations.jl)
-* [QuadGK.jl](https://github.com/JuliaMath/QuadGK.jl)
 * [FastGaussQuadrature.jl](https://github.com/JuliaApproximation/FastGaussQuadrature.jl)
+* [Interpolations.jl](https://github.com/JuliaMath/Interpolations.jl)
+* [MuladdMacro.jl](https://github.com/SciML/OrdinaryDiffEq.jl)
+* [OrdinaryDiffEqLowStorageRK.jl](https://github.com/SciML/OrdinaryDiffEq.jl)
 * [Plots.jl](https://github.com/JuliaPlots/Plots.jl)
 
 They can be added and installed by executing the following commands in the Julia REPL:
 ```julia
 julia> using Pkg
 
-julia> Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "Trixi2Vtk", "OrdinaryDiffEqLowStorageRK",
-                "Interpolations", "QuadGK", "FastGaussQuadrature", "Plots"])
+julia> Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "Trixi2Vtk", "FastGaussQuadrature", "Interpolations", "MuladdMacro", "OrdinaryDiffEqLowStorageRK", "Plots"])
 ```
 You can copy and paste all commands to the REPL *including* the leading
 `julia>` prompts - they will automatically be stripped away by Julia.
@@ -64,7 +63,6 @@ You can directly refer to TermiteMoundInducedAirflowTrixi.jl as
   year={2026},
   howpublished={\url{https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl}},
   license = {MIT},
-  version={0.1.1},
   doi = {https://doi.org/10.5281/zenodo.22708420}
 }
 ```
@@ -73,4 +71,4 @@ You can directly refer to TermiteMoundInducedAirflowTrixi.jl as
 TermiteMoundInducedAirflowTrixi.jl is maintained by [Oliver P. Marx](https://github.com/oliver-mx)
 
 ## License
-TermiteMoundInducedAirflowTrixi.jl is licensed under the MIT license (see [LICENSE.md](LICENSE.md)).
+TermiteMoundInducedAirflowTrixi.jl is licensed under the MIT license (see [LICENSE](LICENSE)).

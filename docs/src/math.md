@@ -50,7 +50,7 @@ Parameters:
 
 - Reynolds-number ``Re = \frac{u D_0 \rho}{\eta}``
 
-- Viscosity ``eta``
+- Viscosity ``\eta``
 
 - ``\beta = \frac{\lambda_w x_r \sqrt{\pi}}{u \sqrt{A_r A}}``
 
@@ -223,4 +223,4 @@ Unknowns:
 
 - Material temperature ``T_i``
 
-More details about the models can be found in the corresponding publication:
+More details about the models can be found in the corresponding publication.
