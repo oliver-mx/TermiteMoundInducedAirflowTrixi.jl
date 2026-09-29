@@ -14,20 +14,22 @@ using TermiteMoundInducedAirflowTrixi,
 import Interpolations: Line
 import Trixi:
     flux_ranocha,
+    flux_hllc,
     ln_mean,
     inv_ln_mean,
     flux,
     varnames,
-    cons2cons,
     cons2prim,
     prim2cons,
     cons2entropy,
-    max_abs_speeds</code></pre><h2 id="Equations"><a class="docs-heading-anchor" href="#Equations">Equations</a><a id="Equations-1"></a><a class="docs-heading-anchor-permalink" href="#Equations" title="Permalink"></a></h2><p>The first step is to set define the model parameters. The function <code>termite_parameters(r,h)</code> generates all required parameters given a radius and a height:</p><pre><code class="language-julia hljs">radius = 0.6;
+    cons2cons,
+    max_abs_speeds,
+    max_abs_speed_naive</code></pre><h2 id="Equations"><a class="docs-heading-anchor" href="#Equations">Equations</a><a id="Equations-1"></a><a class="docs-heading-anchor-permalink" href="#Equations" title="Permalink"></a></h2><p>The first step is to define the model parameters. The function <code>termite_parameters(r,h)</code> generates all required parameters given a radius and a height:</p><pre><code class="language-julia hljs">radius = 0.6;
 height = 2.0;
 (γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI) =
     termite_parameters(radius, height);
 equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h,
-    L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI);</code></pre><h2 id="Initial-state-and-flux-functions"><a class="docs-heading-anchor" href="#Initial-state-and-flux-functions">Initial state and flux functions</a><a id="Initial-state-and-flux-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Initial-state-and-flux-functions" title="Permalink"></a></h2><p>Next, we set the initial state, volume flux and surface flux functions in our equation system:</p><pre><code class="language-julia hljs">initial_condition = TermiteMoundInitialCondition;
+    L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI);</code></pre><h2 id="Initial-state-and-flux-functions"><a class="docs-heading-anchor" href="#Initial-state-and-flux-functions">Initial state and flux functions</a><a id="Initial-state-and-flux-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Initial-state-and-flux-functions" title="Permalink"></a></h2><p>Next, we prescribe the initial state, volume flux and surface flux functions in our equation system:</p><pre><code class="language-julia hljs">initial_condition = TermiteMoundInitialCondition;
 volume_flux = flux_ranocha;
 surface_flux = flux_ranocha;</code></pre><h2 id="Semidiscretization"><a class="docs-heading-anchor" href="#Semidiscretization">Semidiscretization</a><a id="Semidiscretization-1"></a><a class="docs-heading-anchor-permalink" href="#Semidiscretization" title="Permalink"></a></h2><p>The polynomial degree for the <code>DGSEM</code> can be specified now:</p><pre><code class="language-julia hljs">dg = DGSEM(
     polydeg = 4,
@@ -48,30 +50,20 @@ surface_flux = flux_ranocha;</code></pre><h2 id="Semidiscretization"><a class="d
     boundary_conditions = boundary_condition_periodic,
 );</code></pre><h2 id="Solvers-and-callbacks"><a class="docs-heading-anchor" href="#Solvers-and-callbacks">Solvers and callbacks</a><a id="Solvers-and-callbacks-1"></a><a class="docs-heading-anchor-permalink" href="#Solvers-and-callbacks" title="Permalink"></a></h2><p>We want to simulate a full day. In this case we set the time span to:</p><pre><code class="language-julia hljs">tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ;
 ode = semidiscretize(semi, tspan);</code></pre><p>For time integrations we will always use the <code>CarpenterKennedy2N54</code> algorithim. Therefore, the <code>UpdateVelocityCallback</code> is defined as:</p><pre><code class="language-julia hljs">update_velocity_callback =
-    UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false));</code></pre><p>We add a <code>Summary</code>, <code>Stepsize</code> and <code>AMRCallback</code> to complete our callback set:</p><pre><code class="language-julia hljs">summary_callback = SummaryCallback();
-stepsize_callback = StepsizeCallback(cfl = 0.3);
-amr_controller = ControllerThreeLevel(
-    semi,
-    IndicatorMax(semi, variable = (u, equations) -&gt; u[2]),
-    base_level = 5,
-    max_level = 6,
-    max_threshold = -0.35,
-);
-amr_callback = AMRCallback(
-    semi,
-    amr_controller,
-    interval = 1,
-    adapt_initial_condition = true,
-    adapt_initial_condition_only_refine = true,
-);
-callbacks = CallbackSet(summary_callback, stepsize_callback, update_velocity_callback);</code></pre><h2 id="Run-the-simulation"><a class="docs-heading-anchor" href="#Run-the-simulation">Run the simulation</a><a id="Run-the-simulation-1"></a><a class="docs-heading-anchor-permalink" href="#Run-the-simulation" title="Permalink"></a></h2><p>Finally, we can solve the sysstem of equations. The solution is saved across multiple points in time.</p><pre><code class="language-julia hljs">sol = solve(
+    UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false));</code></pre><p>We add a <code>Summary</code> and a <code>Stepsize</code>to complete our callback set:</p><pre><code class="language-julia hljs">summary_callback = SummaryCallback();
+stepsize_callback = StepsizeCallback(cfl = 0.5);
+callbacks = CallbackSet(
+    summary_callback,
+    stepsize_callback,
+    update_velocity_callback
+);</code></pre><h2 id="Run-the-simulation"><a class="docs-heading-anchor" href="#Run-the-simulation">Run the simulation</a><a id="Run-the-simulation-1"></a><a class="docs-heading-anchor-permalink" href="#Run-the-simulation" title="Permalink"></a></h2><p>Finally, we can solve the sysstem of equations. The solution is saved across multiple points in time.</p><pre><code class="language-julia hljs">sol = solve(
     ode,
     CarpenterKennedy2N54(williamson_condition = false);
     dt = 1.0,
     ode_default_options()...,
     saveat = (tspan[end]-tspan[1])/24/2,
     callback = callbacks,
-);</code></pre><h2 id="Solution-plots"><a class="docs-heading-anchor" href="#Solution-plots">Solution plots</a><a id="Solution-plots-1"></a><a class="docs-heading-anchor-permalink" href="#Solution-plots" title="Permalink"></a></h2><p>Our simulation started with a constant initial state of <code>rho</code> and <code>v1</code>. The leading order pressure <code>p0</code> is always constant in <code>x</code>. We can plot the initial state of our flow quanities using:</p><pre><code class="language-julia hljs">pd_init = PlotData1D((x, equations) -&gt; initial_condition(x, last(tspan), equations), semi);
+);</code></pre><h2 id="Solution-plots"><a class="docs-heading-anchor" href="#Solution-plots">Solution plots</a><a id="Solution-plots-1"></a><a class="docs-heading-anchor-permalink" href="#Solution-plots" title="Permalink"></a></h2><p>Our simulation starts with a constant initial state of <code>rho</code> and <code>v1</code>. The leading order pressure <code>p0</code> is always constant in <code>x</code>. We can plot the initial state of our flow quanities using:</p><pre><code class="language-julia hljs">pd_init = PlotData1D((x, equations) -&gt; initial_condition(x, last(tspan), equations), semi)
 plot(pd_init)</code></pre><p><img src="../initial.png" alt="Initial"/></p><p>The time evolution of the density can be visualized using:</p><pre><code class="language-julia hljs">anim_rho = @animate for i ∈ 1:length(sol.t)
     pd_rho = PlotData1D(sol.u[i], semi)
     plot(pd_rho[&quot;rho&quot;])
@@ -81,4 +73,4 @@ gif(anim_rho, &quot;rho.gif&quot;, fps = 5)</code></pre><p><img src="../density.
     plot(pd_v[&quot;v1&quot;])
 end
 gif(anim_v, &quot;v.gif&quot;, fps = 5)</code></pre><p><img src="../velocity.gif" alt="Velocity"/></p><p>The final state of the system variables can be visualized via:</p><pre><code class="language-julia hljs">pd = PlotData1D(sol)
-plot(pd)</code></pre><p><img src="../final.png" alt="Final"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../math/">Mathematics »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 23 September 2026 12:43">Wednesday 23 September 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+plot(pd)</code></pre><p><img src="../final.png" alt="Final"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../math/">Mathematics »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Tuesday 29 September 2026 11:17">Tuesday 29 September 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
