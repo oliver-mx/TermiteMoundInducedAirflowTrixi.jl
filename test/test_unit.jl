@@ -7,15 +7,17 @@ using Trixi: AbstractEquations, @muladd
 import Interpolations: Line
 import Trixi:
     flux_ranocha,
+    flux_hllc,
     ln_mean,
     inv_ln_mean,
     flux,
     varnames,
-    cons2cons,
     cons2prim,
     prim2cons,
     cons2entropy,
-    max_abs_speeds
+    cons2cons,
+    max_abs_speeds,
+    max_abs_speed_naive
 import TermiteMoundInducedAirflowTrixi:
     temp2unscaled, temp2scaled, vel2unscaled, vel2scaled, Get_initial_Ti, T_u
 
@@ -58,10 +60,12 @@ end # @testset "Unit conversions"
             u_rr = SVector(0.1, 1.0, 0.0, 0.0, 0.0)
             @test flux_ranocha(u_ll, u_rr, 1, equations) ≈
                   Trixi.flux(u_ll, 1, equations)
+            @test flux_hllc(u_ll, u_rr, 1, equations) ≈ Trixi.flux(u_ll, 1, equations)
             u_ll = SVector(0.1, -1.0, 0.0, 0.0, 0.0)
             u_rr = SVector(0.1, -1.0, 0.0, 0.0, 0.0)
             @test flux_ranocha(u_ll, u_rr, 1, equations) ≈
                   Trixi.flux(u_ll, 1, equations)
+            @test flux_hllc(u_ll, u_rr, 1, equations) ≈ Trixi.flux(u_ll, 1, equations)
         end
     end
 

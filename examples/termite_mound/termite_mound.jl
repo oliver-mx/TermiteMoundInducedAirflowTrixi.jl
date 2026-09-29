@@ -1,24 +1,21 @@
 using TermiteMoundInducedAirflowTrixi
 using Trixi,
-    Trixi2Vtk,
-    OrdinaryDiffEqLowStorageRK,
-    Interpolations,
-    QuadGK,
-    FastGaussQuadrature,
-    Plots
+    Trixi2Vtk, OrdinaryDiffEqLowStorageRK, Interpolations, FastGaussQuadrature, Plots
 using Trixi: AbstractEquations, @muladd
 import Interpolations: Line
 import Trixi:
     flux_ranocha,
+    flux_hllc,
     ln_mean,
     inv_ln_mean,
     flux,
     varnames,
-    cons2cons,
     cons2prim,
     prim2cons,
     cons2entropy,
-    max_abs_speeds
+    cons2cons,
+    max_abs_speeds,
+    max_abs_speed_naive
 
 ###############################################################################
 # Semidiscretization
@@ -50,11 +47,11 @@ equations = TermiteMoundEquations1D(;
 
 initial_condition = TermiteMoundInitialCondition
 volume_flux = flux_ranocha
-surface_flux = flux_ranocha
+surface_flux = flux_hllc
 
 dg = DGSEM(
     polydeg = 4,
-    surface_flux = flux_ranocha,
+    surface_flux = flux_hllc,
     volume_integral = VolumeIntegralFluxDifferencing(volume_flux),
 )
 
@@ -82,25 +79,17 @@ tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ
 ode = semidiscretize(semi, tspan)
 
 summary_callback = SummaryCallback()
-stepsize_callback = StepsizeCallback(cfl = 0.2)
+stepsize_callback = StepsizeCallback(cfl = 0.4)
 update_velocity_callback =
     UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false))
-amr_controller = ControllerThreeLevel(
-    semi,
-    IndicatorMax(semi, variable = (u, equations) -> u[2]),
-    base_level = 5,
-    max_level = 6,
-    max_threshold = -0.35,
-)
-amr_callback = AMRCallback(
-    semi,
-    amr_controller,
-    interval = 1,
-    adapt_initial_condition = true,
-    adapt_initial_condition_only_refine = true,
-)
+analysis_callback = AnalysisCallback(semi, interval = 100_000, uEltype = real(dg))
 
-callbacks = CallbackSet(summary_callback, stepsize_callback, update_velocity_callback)
+callbacks = CallbackSet(
+    summary_callback,
+    stepsize_callback,
+    update_velocity_callback,
+    analysis_callback,
+)
 
 ###############################################################################
 # run the simulation
@@ -118,19 +107,20 @@ sol = solve(
 # create plots
 
 pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi)
-#plot(pd_init)
+#plot(pd_init); savefig("initial.png")
 
 anim_rho = @animate for i ∈ 1:length(sol.t)
     pd_rho = PlotData1D(sol.u[i], semi)
     plot(pd_rho["rho"])
 end
-#gif(anim_rho, "rho.gif", fps = 5)
+#gif(anim_rho, "density.gif", fps = 5)
 
 anim_v = @animate for i ∈ 1:length(sol.t)
     pd_v = PlotData1D(sol.u[i], semi)
     plot(pd_v["v1"])
 end
-#gif(anim_v, "v.gif", fps = 5)
+#gif(anim_v, "velocity.gif", fps = 5)
 
 pd = PlotData1D(sol)
 plot(pd)
+#savefig("final.png")

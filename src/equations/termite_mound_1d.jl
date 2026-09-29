@@ -217,32 +217,80 @@ end
 @doc raw"""
     Trixi.varnames(u, ::TermiteMoundEquations1D)
 
-Returns the variable names corresponding to the conserved variables in the termite mound model.
+Returns the variable names in the termite mound model.
 
 ### Parameters
-- `::typeof(cons2cons)`: Type indicating conserved to conserved variable conversion.
+- `u`: State vector.
 - `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
 ### Returns
-A tuple of variable names: `("rho", "v1", "p0", "Ti", "x_var")`.
+A 5-tuple of variable names: `("rho", "v1", "p0", "Ti", "x_var")`.
 """
-function Trixi.varnames(u, ::TermiteMoundEquations1D)
-    ("rho", "v1", "p0", "Ti", "x_var")
+function varnames(u, ::TermiteMoundEquations1D)
+    return ("rho", "v1", "p", "Ti", "x_var")
 end
 
-function Trixi.cons2prim(u, ::TermiteMoundEquations1D)
+@doc raw"""
+    Trixi.cons2prim(u, ::TermiteMoundEquations1D)
+
+Returns primitive variables (rho, v1, p, Ti, x_var).
+
+### Parameters
+- `u`: State vector.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+
+### Returns
+SVector with primitive variables.
+"""
+function Trixi.cons2prim(u, equations::TermiteMoundEquations1D)
     return u
 end
 
-function Trixi.prim2cons(prim, ::TermiteMoundEquations1D)
-    return prim
+@doc raw"""
+    Trixi.prim2cons(prim, ::TermiteMoundEquations1D)
+
+Converts primitive variables (rho, v1, p, Ti, x_var) to conservative variables u = (rho, rho*v1, rho*e_total, Ti, x_var).
+
+### Parameters
+- `prim`: State vector.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+
+### Returns
+SVector with conservative variables.
+"""
+function Trixi.prim2cons(prim, equations::TermiteMoundEquations1D)
+    rho, v1, p, Ti, x_var = prim
+    rho_v1 = rho * v1
+    rho_e_total = p * equations.inv_gamma_minus_one + 0.5f0 * (rho_v1 * v1)
+    return SVector(rho, rho_v1, rho_e_total, Ti, x_var)
 end
 
-function Trixi.cons2entropy(u, ::TermiteMoundEquations1D)
-    return u
+@doc raw"""
+    Trixi.cons2entropy(u, ::TermiteMoundEquations1D)
+
+Convert conservative variables to entropy.
+
+### Parameters
+- `u`: State vector.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+
+### Returns
+Entropy SVector.
+"""
+function Trixi.cons2entropy(u, equations::TermiteMoundEquations1D)
+    rho, rho_v1, rho_e_total, Ti, x_var = prim2cons(u, equations)
+    v1 = rho_v1 / rho
+    v_square = v1^2
+    p = (equations.γ - 1) * (rho_e_total - 0.5f0 * rho * v_square)
+    s = log(p) - equations.γ * log(rho)
+    rho_p = rho / p
+    w1 = (equations.γ - s) * equations.inv_gamma_minus_one - 0.5f0 * rho_p * v_square
+    w2 = rho_p * v1
+    w3 = -rho_p
+    return SVector(w1, w2, w3, Ti, x_var)
 end
 
-function Trixi.cons2cons(u, ::TermiteMoundEquations1D)
+function Trixi.cons2cons(u, equations::TermiteMoundEquations1D)
     return u
 end
 
@@ -722,19 +770,20 @@ Calculate 1D flux for a single point
 ### Returns
 Flux as a SVector.
 """
-@inline function Trixi.flux(u, orientation::Integer, ::TermiteMoundEquations1D)
+@inline function Trixi.flux(u, orientation::Integer, equations::TermiteMoundEquations1D)
     rho, v1, _, _, _ = u
     f1 = rho * v1
     return SVector(f1, 0.0, 0.0, 0.0, 0.0)
 end
 
 @doc raw"""
-    Trixi.flux(u, orientation::Integer, ::TermiteMoundEquations1D)
+    flux_ranocha(u_ll, u_rr, orientation::Integer, ::TermiteMoundEquations1D)
 
-Calculate 1D flux.
+Entropy conserving and kinetic energy preserving two-point flux.
 
 ### Parameters
-- `u`: State vector.
+- `u_ll`: Left state vector.
+- `u_rr`: Right state vector.
 - `orientation`: Orientation or normal direction.
 - `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
 
@@ -745,7 +794,7 @@ Flux as a SVector.
     u_ll,
     u_rr,
     orientation::Integer,
-    ::TermiteMoundEquations1D,
+    equations::TermiteMoundEquations1D,
 )
     rho_ll, v1_ll, _, _, _ = u_ll
     rho_rr, v1_rr, _, _, _ = u_rr
@@ -759,6 +808,117 @@ Flux as a SVector.
     end
     f1 = rho_mean * v1_mean
     return SVector(f1, 0.0, 0.0, 0.0, 0.0)
+end
+
+@doc raw"""
+    Trixi.flux_hllc(u_ll, u_rr, orientation, ::TermiteMoundEquations1D)
+
+Computes the 1D HLLC flux (HLL with Contact) for compressible Euler equations developed by E.F. Toro
+[Lecture slides](http://www.prague-sum.com/download/2012/Toro_2-HLLC-RiemannSolver.pdf)
+Signal speeds: [DOI: 10.1137/S1064827593260140](https://doi.org/10.1137/S1064827593260140)
+
+### Parameters
+- `u_ll`: Left state vector.
+- `u_rr`: Right state vector.
+- `orientation`: Orientation or normal direction.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+
+### Returns
+Flux as a SVector.
+"""
+function Trixi.flux_hllc(
+    u_ll,
+    u_rr,
+    orientation::Integer,
+    equations::TermiteMoundEquations1D,
+)
+    rho_ll, v1_ll, p0_ll, _, _ = u_ll
+    rho_rr, v1_rr, p0_rr, _, _ = u_rr
+
+    c_ll = sqrt(equations.γ * p0_ll / rho_ll)
+    c_rr = sqrt(equations.γ * p0_rr / rho_rr)
+
+    rho_e_total_ll =
+        p0_ll * equations.inv_gamma_minus_one + 0.5f0 * (rho_ll * v1_ll * v1_ll)
+    rho_e_total_rr =
+        p0_rr * equations.inv_gamma_minus_one + 0.5f0 * (rho_rr * v1_rr * v1_rr)
+    e_ll = rho_e_total_ll / rho_ll
+    e_rr = rho_e_total_rr / rho_rr
+
+    # Obtain left and right fluxes
+    f_ll = flux(u_ll, orientation, equations)
+    f_rr = flux(u_rr, orientation, equations)
+
+    # Compute Roe averages
+    sqrt_rho_ll = sqrt(rho_ll)
+    sqrt_rho_rr = sqrt(rho_rr)
+    sum_sqrt_rho = sqrt_rho_ll + sqrt_rho_rr
+    vel_L = v1_ll
+    vel_R = v1_rr
+    vel_roe = (sqrt_rho_ll * vel_L + sqrt_rho_rr * vel_R) / sum_sqrt_rho
+    ekin_roe = 0.5f0 * vel_roe^2
+    H_ll = (rho_e_total_ll + p0_ll) / rho_ll
+    H_rr = (rho_e_total_rr + p0_rr) / rho_rr
+    H_roe = (sqrt_rho_ll * H_ll + sqrt_rho_rr * H_rr) / sum_sqrt_rho
+    c_roe = sqrt((equations.γ - 1) * (H_roe - ekin_roe))
+
+    Ssl = min(vel_L - c_ll, vel_roe - c_roe)
+    Ssr = max(vel_R + c_rr, vel_roe + c_roe)
+    sMu_L = Ssl - vel_L
+    sMu_R = Ssr - vel_R
+    if Ssl >= 0
+        f1 = f_ll[1]
+        f2 = f_ll[2]
+        f3 = f_ll[3]
+    elseif Ssr <= 0
+        f1 = f_rr[1]
+        f2 = f_rr[2]
+        f3 = f_rr[3]
+    else
+        SStar =
+            (p0_rr - p0_ll + rho_ll * vel_L * sMu_L - rho_rr * vel_R * sMu_R) /
+            (rho_ll * sMu_L - rho_rr * sMu_R)
+        if Ssl <= 0 <= SStar
+            densStar = rho_ll * sMu_L / (Ssl - SStar)
+            enerStar = e_ll + (SStar - vel_L) * (SStar + p0_ll / (rho_ll * sMu_L))
+            UStar1 = densStar
+            UStar2 = densStar * SStar
+            UStar3 = densStar * enerStar
+
+            f1 = f_ll[1] + Ssl * (UStar1 - rho_ll)
+            f2 = f_ll[2] + Ssl * (UStar2 - rho_ll * v1_ll)
+            f3 = f_ll[3] + Ssl * (UStar3 - rho_e_total_ll)
+        else
+            densStar = rho_rr * sMu_R / (Ssr - SStar)
+            enerStar = e_rr + (SStar - vel_R) * (SStar + p0_rr / (rho_rr * sMu_R))
+            UStar1 = densStar
+            UStar2 = densStar * SStar
+            UStar3 = densStar * enerStar
+
+            #end
+            f1 = f_rr[1] + Ssr * (UStar1 - rho_rr)
+            f2 = f_rr[2] + Ssr * (UStar2 - rho_rr * v1_rr)
+            f3 = f_rr[3] + Ssr * (UStar3 - rho_e_total_rr)
+        end
+    end
+    return SVector(f1, f2, f3, 0.0, 0.0)
+end
+
+function Trixi.flux_hllc(
+    u_ll,
+    u_rr,
+    normal_direction::AbstractVector,
+    equations::TermiteMoundEquations1D,
+)
+    norm_ = abs(normal_direction[1])
+    normal_direction_unit = normal_direction[1] * inv(norm_)
+    f = Trixi.flux_hllc(
+        SVector(u_ll[1], normal_direction_unit * u_ll[2], u_ll[3], u_ll[4], u_ll[5]),
+        SVector(u_rr[1], normal_direction_unit * u_rr[2], u_rr[3], u_ll[4], u_ll[5]),
+        1,
+        equations,
+    )
+    return SVector(f[1], normal_direction_unit * f[2], f[3], 0.0, 0.0) * norm_
 end
 
 @doc raw"""
@@ -779,7 +939,34 @@ Maximum absolute speed.
     return (abs(v1) + c,)
 end
 
+@doc raw"""
+    Trixi.max_abs_speed_naive(u_ll, u_rr, orientation::Integer, equations::TermiteMoundEquations1D)
 
+Calculate estimates for maximum wave speed for local Lax-Friedrichs-type dissipation as the maximum velocity magnitude plus the maximum speed of sound.
+
+### Parameters
+- `u_ll`: Left state vector.
+- `u_rr`: Right state vector.
+- `orientation`: Orientation or normal direction.
+- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+
+### Returns
+Maximum maximum wave speed estimates.
+"""
+@inline function Trixi.max_abs_speed_naive(
+    u_ll,
+    u_rr,
+    orientation::Integer,
+    equations::TermiteMoundEquations1D,
+)
+    rho_ll, v1_ll, p0_ll, _, _ = u_ll
+    rho_rr, v1_rr, p0_rr, _, _ = u_rr
+    v_mag_ll = abs(v1_ll)
+    v_mag_rr = abs(v1_rr)
+    c_ll = sqrt(equations.γ * p0_ll / rho_ll)
+    c_rr = sqrt(equations.γ * p0_rr / rho_rr)
+    return max(v_mag_ll, v_mag_rr) + max(c_ll, c_rr)
+end
 
 @doc raw"""
     Get_initial_Ti(r,h)

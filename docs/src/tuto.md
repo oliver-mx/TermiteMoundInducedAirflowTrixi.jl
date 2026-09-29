@@ -28,20 +28,22 @@ using Trixi: AbstractEquations, @muladd
 import Interpolations: Line
 import Trixi:
     flux_ranocha,
+    flux_hllc,
     ln_mean,
     inv_ln_mean,
     flux,
     varnames,
-    cons2cons,
     cons2prim,
     prim2cons,
     cons2entropy,
-    max_abs_speeds
+    cons2cons,
+    max_abs_speeds,
+    max_abs_speed_naive
 ```
 
 ## Equations
 
-The first step is to set define the model parameters. The function `termite_parameters(r,h)` generates all required parameters given a radius and a height:
+The first step is to define the model parameters. The function `termite_parameters(r,h)` generates all required parameters given a radius and a height:
 
 ```julia
 radius = 0.6;
@@ -54,7 +56,7 @@ equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h
 
 ## Initial state and flux functions
 
-Next, we set the initial state, volume flux and surface flux functions in our equation system:
+Next, we prescribe the initial state, volume flux and surface flux functions in our equation system:
 ```julia
 initial_condition = TermiteMoundInitialCondition;
 volume_flux = flux_ranocha;
@@ -110,25 +112,15 @@ update_velocity_callback =
     UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false));
 ```
 
-We add a `Summary`, `Stepsize` and `AMRCallback` to complete our callback set:
+We add a `Summary` and a `Stepsize`to complete our callback set:
 ```julia
 summary_callback = SummaryCallback();
-stepsize_callback = StepsizeCallback(cfl = 0.3);
-amr_controller = ControllerThreeLevel(
-    semi,
-    IndicatorMax(semi, variable = (u, equations) -> u[2]),
-    base_level = 5,
-    max_level = 6,
-    max_threshold = -0.35,
+stepsize_callback = StepsizeCallback(cfl = 0.5);
+callbacks = CallbackSet(
+    summary_callback,
+    stepsize_callback,
+    update_velocity_callback
 );
-amr_callback = AMRCallback(
-    semi,
-    amr_controller,
-    interval = 1,
-    adapt_initial_condition = true,
-    adapt_initial_condition_only_refine = true,
-);
-callbacks = CallbackSet(summary_callback, stepsize_callback, update_velocity_callback);
 ```
 
 ## Run the simulation
@@ -148,11 +140,11 @@ sol = solve(
 
 ## Solution plots
 
-Our simulation started with a constant initial state of `rho` and `v1`.
+Our simulation starts with a constant initial state of `rho` and `v1`.
 The leading order pressure `p0` is always constant in `x`.
 We can plot the initial state of our flow quanities using:
  ```julia
-pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi);
+pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi)
 plot(pd_init)
 ```
 ![Initial](./initial.png)

@@ -10,15 +10,17 @@ using Trixi: AbstractEquations
 import Interpolations: Line
 import Trixi:
     flux_ranocha,
+    flux_hllc,
     ln_mean,
     inv_ln_mean,
     flux,
     varnames,
-    cons2cons,
     cons2prim,
     prim2cons,
     cons2entropy,
-    max_abs_speeds
+    cons2cons,
+    max_abs_speeds,
+    max_abs_speed_naive
 
 include("equations/equations.jl")
 include("callback_step/callback_step.jl")

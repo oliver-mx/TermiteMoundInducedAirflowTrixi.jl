@@ -4,15 +4,17 @@ using Trixi: AbstractEquations, @muladd
 import Interpolations: Line
 import Trixi:
     flux_ranocha,
+    flux_hllc,
     ln_mean,
     inv_ln_mean,
     flux,
     varnames,
-    cons2cons,
     cons2prim,
     prim2cons,
     cons2entropy,
-    max_abs_speeds
+    cons2cons,
+    max_abs_speeds,
+    max_abs_speed_naive
 
 ###############################################################################
 # Semidiscretization
@@ -44,7 +46,7 @@ equations = TermiteMoundEquations1D(;
 
 initial_condition = TermiteMoundInitialCondition
 volume_flux = flux_ranocha
-surface_flux = flux_ranocha
+surface_flux = flux_hllc
 
 dg = DGSEM(
     polydeg = 4,
@@ -72,11 +74,11 @@ semi = SemidiscretizationHyperbolic(
 ###############################################################################
 # ODE solvers, callbacks etc.
 
-tspan = (0.0, 30.0)
+tspan = (0.0, 75.0)
 ode = semidiscretize(semi, tspan)
 
 summary_callback = SummaryCallback()
-stepsize_callback = StepsizeCallback(cfl = 0.3)
+stepsize_callback = StepsizeCallback(cfl = 0.5)
 update_velocity_callback =
     UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false))
 analysis_callback = AnalysisCallback(semi, interval = 100_000, uEltype = real(dg))
@@ -100,17 +102,17 @@ sol = solve(
 );
 
 #────────────────────────────────────────────────────────────────────────────────────────────────────
-# Simulation running 'TermiteMoundEquations1D' with DGSEM(polydeg=4)
+# Simulation running 'TermiteMoundEquations1D' with DGSEM(polydeg=4) and cfl=0.25
 #────────────────────────────────────────────────────────────────────────────────────────────────────
-#timesteps:              52208                run time:       1.46490114e+01 s
-# Δt:             4.76323339e-04                └── GC time:    1.51625670e+00 s (10.351%)
-# sim. time:      3.00000000e+01 (100.000%)     time/DOF/rhs!:  2.28164529e-08 s
-#                                               PID:            3.50644575e-07 s
-#DOFs per field:           160                alloc'd memory:        211.693 MiB
+#timesteps:             106415                run time:       3.07041996e+01 s
+# Δt:             3.95991094e-04                └── GC time:    3.44538290e+00 s (11.221%)
+# sim. time:      7.50000000e+01 (100.000%)     time/DOF/rhs!:  2.27529539e-08 s
+#                                               PID:            3.55300156e-07 s
+#DOFs per field:           160                alloc'd memory:        100.502 MiB
 #elements:                  32                device memory:           0.000 MiB
 #
-# Variable:       rho              v1               p0               Ti               x_var
-# L2 error:       1.95925763e-03   1.76925676e-02   7.17164354e-04   5.31868089e-05   3.99059200e-17
-# Linf error:     4.28060276e-03   2.19855918e-02   7.17164354e-04   8.80297913e-05   2.22044605e-16
-# ∑∂S/∂U ⋅ Uₜ :  -1.89874791e-06
+# Variable:       rho              v1               p                Ti               x_var
+# L2 error:       2.24311704e-03   6.98593919e-02   1.47349259e-04   1.56925914e-04   3.99059200e-17
+# Linf error:     4.86510680e-03   7.50852786e-02   1.47349259e-04   2.39882029e-04   2.22044605e-16
+# ∑∂S/∂U ⋅ Uₜ :  -2.36750442e-06
 #────────────────────────────────────────────────────────────────────────────────────────────────────

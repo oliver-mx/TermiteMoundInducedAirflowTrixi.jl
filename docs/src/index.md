@@ -61,6 +61,8 @@ You can directly refer to TermiteMoundInducedAirflowTrixi.jl as
 }
 ```
 
+When using this package, please make sure to cite **[Trixi.jl](https://github.com/trixi-framework/Trixi.jl)** as well.
+
 ## Authors
 
 TermiteMoundInducedAirflowTrixi.jl is maintained by [Oliver P. Marx](https://github.com/oliver-mx)
