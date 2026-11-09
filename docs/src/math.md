@@ -95,7 +95,7 @@ Therefore, we consider the following asmyptotic expansion with leading order ``O
 		\rho &= \rho_0 + O(\epsilon) \\
 		u &= u_0 + O(\epsilon) \\
 		T &= T_0 + O(\epsilon) \\
-		p &= {\color{blue}p_0} + p_h + \epsilon {\color{red}p_1} + O(\epsilon^2)
+		p &= p_0 + p_h + \epsilon p_1 + O(\epsilon^2)
 	\end{align*}
 ```
 
@@ -104,10 +104,10 @@ Inserting this expansion gives
 ```math
 	\begin{aligned}
 		\frac{\partial \rho}{\partial t} + \frac{\partial \left( \rho u\right)}{\partial x} &= - \frac{\textrm{A}_x}{\textrm{A}}\rho u \\
-		\frac{\partial \left( \rho u \right)}{\partial t} + \frac{\partial}{\partial x} \left[\rho u^2 + {\color{red}p_1}\right] &= - \frac{\textrm{A}_x}{\textrm{A}}\rho u^2- \rho u \left( \beta \eta + \beta\left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}(\rho - \rho_{h_0}) \\
-		\frac{\partial {\color{blue}p_0}}{\partial t} + \gamma {\color{blue}p_0} \frac{\partial u}{\partial x} &= - \gamma \frac{\textrm{A}_x}{\textrm{A}} u {\color{blue}p_0} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) \\
-		\frac{\partial {\color{blue}p_0}}{\partial x} &= 0 \\
-		{\color{blue}p_0} &= \rho T \\
+		\frac{\partial \left( \rho u \right)}{\partial t} + \frac{\partial}{\partial x} \left[\rho u^2 + p_1\right] &= - \frac{\textrm{A}_x}{\textrm{A}}\rho u^2- \rho u \left( \beta \eta + \beta\left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}(\rho - \rho_{h_0}) \\
+		\frac{\partial p_0}{\partial t} + \gamma p_0 \frac{\partial u}{\partial x} &= - \gamma \frac{\textrm{A}_x}{\textrm{A}} u p_0 - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) \\
+		\frac{\partial p_0}{\partial x} &= 0 \\
+		p_0 &= \rho T \\
 		\frac{\partial T_i}{\partial t} &= k_i \left( T - T_i \right).		
     \end{aligned}
 ```
@@ -118,16 +118,16 @@ Unknowns:
 
 - Velocity ``u``
 
-- Leading order pressure ``{\color{blue}p_0}``
+- Leading order pressure ``p_0``
 
-- First order pressure ``{\color{red}p_1}``
+- First order pressure ``p_1``
 
 - Air temperature ``T``
 
 - Material temperature ``T_i``
 
 Due to the flow channel design we impose periodic boundary conditions.
-As a result ``{\color{blue}p_0}`` is constant in space. 
+As a result ``p_0`` is constant in space. 
 We assume to have appropriate initial states given by ``\rho^0(x)``, ``u^0(x)``, ``p_0^0`` and ``T_i^0(x)``, respectively.
 The boundary conditions are ``p_1(t, 0) = 0``,  ``p_1(t, 1) = 0`` and ``\textrm{A}(0)\rho(t,0)u(t,0) = \textrm{A}(1)\rho(t,1)u(t,1)``.
 
@@ -141,15 +141,15 @@ The stationary equations are
 ```math
 	\begin{aligned}
 		\frac{\partial \left( \rho u\right)}{\partial x} &= - \frac{\textrm{A}_x}{\textrm{A}}\rho u \\
-		\frac{\partial}{\partial x} \left[\rho u^2 + {\color{red}p_1}\right] &= - \frac{\textrm{A}_x}{\textrm{A}}\rho u^2- \rho u \left( \beta \eta + \beta\left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}(\rho - \rho_{h_0}) \\
-		\gamma {\color{blue}p_0} \frac{\partial u}{\partial x} &= - \gamma \frac{\textrm{A}_x}{\textrm{A}} u {\color{blue}p_0} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) \\
-		\frac{\partial {\color{blue}p_0}}{\partial x} &= 0 \\
-		{\color{blue}p_0} &= \rho T \\
+		\frac{\partial}{\partial x} \left[\rho u^2 + p_1\right] &= - \frac{\textrm{A}_x}{\textrm{A}}\rho u^2- \rho u \left( \beta \eta + \beta\left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}(\rho - \rho_{h_0}) \\
+		\gamma p_0 \frac{\partial u}{\partial x} &= - \gamma \frac{\textrm{A}_x}{\textrm{A}} u p_0 - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) \\
+		\frac{\partial p_0}{\partial x} &= 0 \\
+		p_0 &= \rho T \\
 		0 &= \int_0^1  \frac{k_w}{\gamma A \sqrt{A}}  \left( T - T_u \right).	
     \end{aligned}
 ```
 
-With appropriate initial and boundary conditions we have ``{\color{blue}p_0}=1``.
+With appropriate initial and boundary conditions we have ``p_0=1``.
 
 Unknowns:
 
@@ -157,7 +157,7 @@ Unknowns:
 
 - Velocity ``u``
 
-- Pressure ``{\color{red}p_1}``
+- Pressure ``p_1``
 
 - Temperature ``T``
 
@@ -174,13 +174,13 @@ We make the assumption that the spatial variation of the velocity satisfies
 		\frac{\partial\left( u\right)}{\partial x} &= - \frac{\textrm{A}_x}{\textrm{A}} u + Q,
     \end{aligned}
 ```
- where ``Q = \frac{1}{\gamma {\color{blue}p_0}} \left[ -\frac{\partial {\color{blue}p_0}}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)\right]``.
+ where ``Q = \frac{1}{\gamma p_0} \left[ -\frac{\partial p_0}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)\right]``.
 
  If ``Q`` is time independent one can write 
 
 ```math
 	\begin{aligned}
-		u(t,x) &= \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A(y)\left[ -\frac{\partial  {\color{blue}p_0}}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)\right] \, dy.
+		u(t,x) &= \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A(y)\left[ -\frac{\partial  p_0}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)\right] \, dy.
     \end{aligned}
 ```
 
@@ -193,7 +193,7 @@ The new variable ``v`` is time dependent and it must satisfy
 ```
 
 The ODE for ``v`` is obtained from integrating the momentum balance od the asymptotic model.
-The periodic boundary condition of ``{\color{red}p_1}`` is used in this set to eliminate the variable ``{\color{red}p_1}``.
+The periodic boundary condition of ``p_1`` is used in this set to eliminate the variable ``p_1``.
 
 Finally the reformulated asymptotic model, i.e. **1D Termite Mound Model**, reads 
 
@@ -202,10 +202,10 @@ Finally the reformulated asymptotic model, i.e. **1D Termite Mound Model**, read
 	\begin{aligned}
 		\frac{\partial \rho}{\partial t} + \frac{\partial \left( \rho u\right)}{\partial x} &= - \frac{\textrm{A}_x}{\textrm{A}}\rho u \\
 	    \frac{\partial v}{\partial t} &= \frac{1}{\int_0^1 \frac{\rho}{A} \, dy} \left[ \int_0^1 -\rho u u_x  - \rho u \left( \beta \eta - \beta\left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}(\rho - \rho_{h_0}) \, dy \right] \\
-        \frac{\partial {\color{blue}p_0}}{\partial t} + \gamma {\color{blue}p_0} \frac{\partial u}{\partial x} &= - \gamma \frac{\textrm{A}_x}{\textrm{A}} u {\color{blue}p_0} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) \\
+        \frac{\partial p_0}{\partial t} + \gamma p_0 \frac{\partial u}{\partial x} &= - \gamma \frac{\textrm{A}_x}{\textrm{A}} u p_0 - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) \\
         \frac{\partial T_i}{\partial t} &= k_i \left( T - T_i \right) \\
-        {\color{blue}p_0} &= \rho T \\
-        u(t,x) &= \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A(y)\left[ -\frac{\partial  {\color{blue}p_0}}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)\right] \, dy.
+        p_0 &= \rho T \\
+        u(t,x) &= \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A(y)\left[ -\frac{\partial  p_0}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)\right] \, dy.
     \end{aligned}
 ```
 
@@ -217,7 +217,7 @@ Unknowns:
 
 - Velocity ``v``
 
-- Leading order pressure ``{\color{blue}p_0}``
+- Leading order pressure ``p_0``
 
 - Air temperature ``T``
 

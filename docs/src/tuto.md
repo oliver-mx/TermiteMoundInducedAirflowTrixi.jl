@@ -60,7 +60,7 @@ Next, we prescribe the initial state, volume flux and surface flux functions in 
 ```julia
 initial_condition = TermiteMoundInitialCondition;
 volume_flux = flux_ranocha;
-surface_flux = flux_ranocha;
+surface_flux = flux_hllc;
 ```
 
 ## Semidiscretization

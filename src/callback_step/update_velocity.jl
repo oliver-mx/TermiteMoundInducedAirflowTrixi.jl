@@ -11,9 +11,9 @@
 ### Parameters
     - `solver`: ODE solver.
 
-The `UpdateVelocityCallback` called after every time step.
-In this callback explicit time steps for the velocity ``v`` and pressure ``p_0`` are performed.
-For the solver we reccomend `CarpenterKennedy2N54` from `OrdinaryDiffEqLowStorageRK`.
+The `UpdateVelocityCallback` is called after every time step in order to solve the PDE-ODE system in a Godunov splitting scheme.
+In this callback performs explicit time steps for the velocity ``v`` and pressure ``p_0``.
+For the time integration method we reccomend `CarpenterKennedy2N54` from `OrdinaryDiffEqLowStorageRK`.
 After the time integration, the velocity ``u`` is computed and the integrator is updated.
 
 !!! note

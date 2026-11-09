@@ -247,7 +247,7 @@ function Trixi.cons2prim(u, equations::TermiteMoundEquations1D)
 end
 
 @doc raw"""
-    Trixi.prim2cons(prim, ::TermiteMoundEquations1D)
+    Trixi.prim2cons(u, ::TermiteMoundEquations1D)
 
 Converts primitive variables (rho, v1, p, Ti, x_var) to conservative variables u = (rho, rho*v1, rho*e_total, Ti, x_var).
 
@@ -258,11 +258,8 @@ Converts primitive variables (rho, v1, p, Ti, x_var) to conservative variables u
 ### Returns
 SVector with conservative variables.
 """
-function Trixi.prim2cons(prim, equations::TermiteMoundEquations1D)
-    rho, v1, p, Ti, x_var = prim
-    rho_v1 = rho * v1
-    rho_e_total = p * equations.inv_gamma_minus_one + 0.5f0 * (rho_v1 * v1)
-    return SVector(rho, rho_v1, rho_e_total, Ti, x_var)
+function Trixi.prim2cons(u, equations::TermiteMoundEquations1D)
+    return u
 end
 
 @doc raw"""
@@ -278,10 +275,10 @@ Convert conservative variables to entropy.
 Entropy SVector.
 """
 function Trixi.cons2entropy(u, equations::TermiteMoundEquations1D)
-    rho, rho_v1, rho_e_total, Ti, x_var = prim2cons(u, equations)
-    v1 = rho_v1 / rho
+    rho, v1, p, Ti, x_var = u
+    rho_v1 = rho * v1
+    rho_e_total = p * equations.inv_gamma_minus_one + 0.5f0 * (rho_v1 * v1)
     v_square = v1^2
-    p = (equations.γ - 1) * (rho_e_total - 0.5f0 * rho * v_square)
     s = log(p) - equations.γ * log(rho)
     rho_p = rho / p
     w1 = (equations.γ - s) * equations.inv_gamma_minus_one - 0.5f0 * rho_p * v_square
@@ -901,7 +898,7 @@ function Trixi.flux_hllc(
             f3 = f_rr[3] + Ssr * (UStar3 - rho_e_total_rr)
         end
     end
-    return SVector(f1, f2, f3, 0.0, 0.0)
+    return SVector(f1, 0.0, 0.0, 0.0, 0.0)
 end
 
 function Trixi.flux_hllc(
@@ -918,7 +915,7 @@ function Trixi.flux_hllc(
         1,
         equations,
     )
-    return SVector(f[1], normal_direction_unit * f[2], f[3], 0.0, 0.0) * norm_
+    return SVector(f[1], 0.0, 0.0, 0.0, 0.0) * norm_
 end
 
 @doc raw"""
