@@ -82,14 +82,8 @@ summary_callback = SummaryCallback()
 stepsize_callback = StepsizeCallback(cfl = 0.5)
 update_velocity_callback =
     UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false))
-analysis_callback = AnalysisCallback(semi, interval = 100_000, uEltype = real(dg))
 
-callbacks = CallbackSet(
-    summary_callback,
-    stepsize_callback,
-    update_velocity_callback,
-    analysis_callback,
-)
+callbacks = CallbackSet(summary_callback, stepsize_callback, update_velocity_callback)
 
 ###############################################################################
 # run the simulation
@@ -107,20 +101,21 @@ sol = solve(
 # create plots
 
 pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi)
-#plot(pd_init); savefig("initial.png")
+plot(pd_init);
+savefig("initial.png");
 
 anim_rho = @animate for i ∈ 1:length(sol.t)
     pd_rho = PlotData1D(sol.u[i], semi)
-    plot(pd_rho["rho"])
+    plot(pd_rho["rho"]);
 end
-#gif(anim_rho, "density.gif", fps = 5)
+gif(anim_rho, "density.gif", fps = 5);
 
 anim_v = @animate for i ∈ 1:length(sol.t)
     pd_v = PlotData1D(sol.u[i], semi)
-    plot(pd_v["v1"])
+    plot(pd_v["v1"]);
 end
-#gif(anim_v, "velocity.gif", fps = 5)
+gif(anim_v, "velocity.gif", fps = 5);
 
-pd = PlotData1D(sol)
-plot(pd)
-#savefig("final.png")
+pd = PlotData1D(sol);
+plot(pd);
+savefig("final.png");

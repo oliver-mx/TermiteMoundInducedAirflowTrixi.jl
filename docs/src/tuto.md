@@ -69,7 +69,7 @@ The polynomial degree for the `DGSEM` can be specified now:
 ```julia
 dg = DGSEM(
     polydeg = 4,
-    surface_flux = flux_ranocha,
+    surface_flux = surface_flux,
     volume_integral = VolumeIntegralFluxDifferencing(volume_flux),
 );
 ```
@@ -112,7 +112,7 @@ update_velocity_callback =
     UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false));
 ```
 
-We add a `Summary` and a `Stepsize`to complete our callback set:
+We add a `Summary` and a `Stepsize` to complete our callback set:
 ```julia
 summary_callback = SummaryCallback();
 stepsize_callback = StepsizeCallback(cfl = 0.5);
@@ -125,7 +125,7 @@ callbacks = CallbackSet(
 
 ## Run the simulation
 
-Finally, we can solve the sysstem of equations.
+Finally, we can solve the system of equations.
 The solution is saved across multiple points in time.
  ```julia
 sol = solve(
@@ -178,3 +178,98 @@ pd = PlotData1D(sol)
 plot(pd)
 ```
 ![Final](./final.png)
+
+## Plain code
+
+```julia
+using Pkg
+Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "Trixi2Vtk",
+    "OrdinaryDiffEqLowStorageRK", "Interpolations", "FastGaussQuadrature", "Plots"])
+using TermiteMoundInducedAirflowTrixi,
+    Trixi,
+    Trixi2Vtk,
+    OrdinaryDiffEqLowStorageRK,
+    Interpolations,
+    FastGaussQuadrature,
+    Plots
+using Trixi: AbstractEquations, @muladd
+import Interpolations: Line
+import Trixi:
+    flux_ranocha,
+    flux_hllc,
+    ln_mean,
+    inv_ln_mean,
+    flux,
+    varnames,
+    cons2prim,
+    prim2cons,
+    cons2entropy,
+    cons2cons,
+    max_abs_speeds,
+    max_abs_speed_naive
+radius = 0.6;
+height = 2.0;
+(γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI) =
+    termite_parameters(radius, height);
+equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h,
+    L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI);
+initial_condition = TermiteMoundInitialCondition;
+volume_flux = flux_ranocha;
+surface_flux = flux_hllc;
+dg = DGSEM(
+    polydeg = 4,
+    surface_flux = surface_flux,
+    volume_integral = VolumeIntegralFluxDifferencing(volume_flux),
+);
+mesh = TreeMesh(
+    (0.0,),
+    (1.0,),
+    initial_refinement_level = 5,
+    n_cells_max = 1000,
+    periodicity = true,
+);
+semi = SemidiscretizationHyperbolic(
+    mesh,
+    equations,
+    initial_condition,
+    dg,
+    source_terms = source_terms,
+    boundary_conditions = boundary_condition_periodic,
+);
+tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ;
+ode = semidiscretize(semi, tspan);
+update_velocity_callback =
+    UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false));
+summary_callback = SummaryCallback();
+stepsize_callback = StepsizeCallback(cfl = 0.5);
+callbacks = CallbackSet(
+    summary_callback,
+    stepsize_callback,
+    update_velocity_callback
+);
+sol = solve(
+    ode,
+    CarpenterKennedy2N54(williamson_condition = false);
+    dt = 1.0,
+    ode_default_options()...,
+    saveat = (tspan[end]-tspan[1])/24/2,
+    callback = callbacks,
+);
+pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi)
+plot(pd_init); 
+savefig("initial.png");
+anim_rho = @animate for i ∈ 1:length(sol.t)
+    pd_rho = PlotData1D(sol.u[i], semi)
+    plot(pd_rho["rho"]);
+end
+gif(anim_rho, "rho.gif", fps = 5);
+anim_v = @animate for i ∈ 1:length(sol.t)
+    pd_v = PlotData1D(sol.u[i], semi)
+    plot(pd_v["v1"]);
+end
+gif(anim_v, "v.gif", fps = 5);
+pd = PlotData1D(sol);
+plot(pd); 
+savefig("final.png");
+
+```
