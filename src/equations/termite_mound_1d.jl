@@ -5,36 +5,100 @@
 @muladd begin
 #! format: noindent
 @doc raw"""
-    TermiteMoundEquations1D(;γ = 1.3987529976019184, k_i = 0.0004184703194089407, k_w = 4.550553359854458, tᵣ = 87.10175873820496, uᵣ = 0.05, xa = 0.17221939177753745, xb = 0.5680821161575328, xc = 0.9793345160180965, r = 0.6874197366854203, h = 1.5810403656581307, L = 4.355087936910248, β = 26.9749915565812, η = 0.93, Fr² = 5.851592474205325e-5, ρₕ₀ = 0.982, T_ref = 297.76980029566033, t_ref = 0.0033582989242263127, T0 = 27.0, v0 = -2.219, Ti_LI = linear_interpolation([0.0, 0.5, 1.0], [27.6, 28.8, 27.5]))
+    TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀,
+                            T_ref, t_ref, T0, v0, Ti_LI,
+                            cross_section, height_profile, boundary_temperature)
 
-TermiteMoundEquations1D (TME) in one space dimension. The governing equations are
+Termite mound equations (TME) in one space dimension: a low Mach number model of the airflow
+through the closed flow channel of a termite mound (soil → flute → chimney → soil),
+parametrized by ``x \in [0, 1]`` (periodic). All quantities are scaled.
+
+### Equations
 ```math
-	\begin{aligned}
-		\frac{\partial \rho}{\partial t} + \frac{\partial \left( \rho u\right)}{\partial x} &= - \frac{\textrm{A}_x}{\textrm{A}}\rho u \\
-	    \frac{\partial v}{\partial t} &= \frac{1}{\int_0^1 \frac{\rho}{A} \, dy} \left[ \int_0^1 -\rho u u_x  - \rho u \left( \beta \eta - \beta\left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}(\rho - \rho_{h_0}) \, dy \right] \\
-        \frac{\partial p_0}{\partial t} + \gamma p_0 \frac{\partial u}{\partial x} &= - \gamma \frac{\textrm{A}_x}{\textrm{A}} u p_0 - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) \\
-        \frac{\partial T_i}{\partial t} &= k_i \left( T - T_i \right) \\
-        p_0 &= \rho T \\
-        u(t,x) &= \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A(y)\left[ -\frac{\partial  p_0}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)\right] \, dy.
-    \end{aligned}
+\begin{aligned}
+\rho_t + (\rho u)_x &= -\frac{A_x}{A} \rho u, \\
+T_{i,t} &= k_i (T - T_i), \\
+v'(t) &= \frac{1}{\int_0^1 \frac{\rho}{A} \, dx} \int_0^1 \left[ -\rho u u_x
+         - \frac{\beta}{A} \rho u \left(\eta + (1-\eta)|u|\right)
+         - \frac{h_x}{Fr^2} (\rho - \rho_{h_0}) \right] dx, \\
+p_0'(t) &= -\gamma p_0 \left(u_x + \frac{A_x}{A} u\right)
+           - \frac{I_w k_w}{\sqrt{A}} \left(T - T_u(t, x, T_i)\right)
+           \qquad \text{for all } x, \\
+p_0 &= \rho T.
+\end{aligned}
+```
+Since ``p_0`` does not depend on ``x``, the ``p_0`` equation determines the velocity. With
+``Q = -I_w k_w (T - T_u)/(\sqrt{A} \gamma p_0)`` and ``c = \int_0^1 A Q \, dx / \int_0^1 A \, dx``:
+```math
+p_0' = \gamma p_0 c, \qquad
+u(t, x) = \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A (Q - c) \, dy,
+```
+so that ``v = A(0) u(t, 0)`` is the volume flux at ``x = 0``.
+
+### Unknowns and state vector
+The unknowns are the air density ``\rho``, the air velocity ``u``, the leading-order pressure
+``p_0`` (spatially constant), the mound material temperature ``T_i`` and the auxiliary
+velocity ``v``. The state vector at every node is `(rho, v1, p, Ti)` =
+``(\rho, u, p_0, T_i)``; ``v`` is not stored separately (see [`GodunovSplittingCallback`](@ref)
+and [`CoupledSourceTerms`](@ref)).
+
+### Model data
+The cross section, the height profile and the boundary temperature are passed as objects
+(required keyword arguments, see below); the heat transfer factor is fixed:
+- cross section ``A(x)`` and ``A_x(x)`` (`cross_section`, see [`A`](@ref)),
+- slope of the height profile ``h_x(x)`` (`height_profile`, see [`h_x`](@ref)),
+- boundary temperature ``T_u(t, x, T_i)`` (`boundary_temperature`, see [`T_u`](@ref)),
+- spatially variable heat transfer coefficient ``\alpha_w I_w(x)`` ([`I_w`](@ref)).
+
+### Usage
+```julia
+(γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI) =
+    termite_parameters(1.5, 2.5)
+cross_section = CrossSectionConstant()
+height_profile = HeightProfileTermiteMound(; xa, xb, L, h)
+boundary_temperature = BoundaryTemperatureTermiteMound(; xa, xb, xc, tᵣ, T_ref)
+equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr²,
+                                    ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI,
+                                    cross_section, height_profile, boundary_temperature)
 ```
 
-The unknown quantities of the TME are the air density ``ρ``, the air velocity ``u``, the leading order pressure ``p_0``, the internal temperature of the mound ``T_i``, and the auxiliary velocity variable ``v``.
-We denote the (possibly) variable cross section function ``A(x)``, the height profile function ``h(x)`` and the boundary temperature function ``T_u(t,x)``.
-The boundary temperature function is defined piecewise by
-```math
-    \begin{align*}
-		\textrm{T}_\textrm{u}(t,x)  = \begin{cases}
-			\textrm{T}_\textrm{soil}(t) & ,\text{if } x \in [0,x_a] \, \cup \, (x_c, 1]  \quad \text{(soil)} \\
-			\frac{\textrm{T}_\textrm{air}(t) + T_i(t,x) }{2} & ,\text{if } x \in (x_a,x_b]  \quad \text{(flute)} \\
-			T_i(t,x) & ,\text{if } x \in (x_b,x_c]  \quad \text{(chimney).} \\
-		\end{cases}
-	\end{align*}
-```
-It depends on the internal mound temperature ``T_i``, the soil temperature (at 30cm depth) ``T_{soil}`` and the ambient air temperature ``T_{air}``. 
-The parameters ``x_a``, ``x_b`` and ``x_c`` are fixed spatial locations along the flow channel.
+### Keyword arguments
+The scalar arguments are usually created by [`termite_parameters`](@ref). Their defaults are
+those of `termite_parameters(0.6, 2.0)` (mound radius 0.6 m, height 2 m), except
+`v0 = -2.219` and a simple three-point `Ti_LI`.
+- `γ`: adiabatic exponent.
+- `k_i`: heat exchange rate between air and mound material (``T_i`` equation).
+- `k_w`: wall heat transfer coefficient (``p_0`` equation, contains ``\alpha_w``).
+- `tᵣ`: reference time ``L/u_r`` (s). `uᵣ`: reference velocity (m/s).
+- `xa`, `xb`, `xc`: scaled positions of the transitions soil → flute, flute → chimney (top
+  of the mound) and chimney → soil (see [`mound_geometry`](@ref)).
+- `r`, `h`: radius and height of the mound (m). `L`: length of the flow channel (m).
+- `β`: friction coefficient. `η`: viscosity.
+- `Fr²`: squared Froude number ``u_r^2/(gL)``. `ρₕ₀`: scaled reference density of the
+  buoyancy term.
+- `T_ref`: reference temperature (K). `t_ref`: its inverse ``1/T_{ref}`` (1/K), used to scale
+  ``T_u`` (which is computed in K).
+- `T0`: initial air temperature (°C). `v0`: initial velocity (cm/s).
+- `Ti_LI`: initial mound material temperature (°C) as an interpolation object on ``[0, 1]``.
+- `cross_section` (required): cross section of the flow channel, e.g.
+  [`CrossSectionConstant`](@ref) (``A \equiv 1``), [`CrossSectionSine`](@ref) or a
+  user-defined [`CrossSection`](@ref).
+- `height_profile` (required): slope of the height profile, e.g.
+  [`HeightProfileTermiteMound`](@ref) or a user-defined [`HeightProfile`](@ref).
+- `boundary_temperature` (required): boundary (wall) temperature, e.g.
+  [`BoundaryTemperatureTermiteMound`](@ref) or a user-defined [`BoundaryTemperature`](@ref).
+
+!!! note
+    The positions `xa`, `xb`, `xc` and the length `L` are used both by the equations
+    (``I_w``, plotting of ``T_i``) and by the termite mound height profile and boundary
+    temperature. Create all of them from the same [`termite_parameters`](@ref) call.
 """
-struct TermiteMoundEquations1D{RealT<:Real} <: AbstractEquations{1,5}
+struct TermiteMoundEquations1D{
+    RealT<:Real,
+    CrossSectionType,
+    HeightProfileType,
+    BoundaryTemperatureType,
+} <: AbstractEquations{1,4}
     γ::RealT
     inv_gamma_minus_one::RealT
     k_i::RealT
@@ -56,6 +120,9 @@ struct TermiteMoundEquations1D{RealT<:Real} <: AbstractEquations{1,5}
     T0::RealT
     v0::RealT
     Ti_LI::Interpolations.Extrapolation
+    cross_section::CrossSectionType
+    height_profile::HeightProfileType
+    boundary_temperature::BoundaryTemperatureType
     function TermiteMoundEquations1D(;
         γ = 1.3987529976019184,
         k_i = 0.0006167609978013738,
@@ -80,9 +147,17 @@ struct TermiteMoundEquations1D{RealT<:Real} <: AbstractEquations{1,5}
             [0.0, 0.5344827593241117, 1.0],
             [27.53453, 28.98715, 27.55033],
         ),
+        cross_section,
+        height_profile,
+        boundary_temperature,
     )
         γ, inv_gamma_minus_one = promote(γ, inv(γ - 1.0))
-        new{typeof(β)}(
+        new{
+            typeof(β),
+            typeof(cross_section),
+            typeof(height_profile),
+            typeof(boundary_temperature),
+        }(
             γ,
             inv_gamma_minus_one,
             k_i,
@@ -104,51 +179,74 @@ struct TermiteMoundEquations1D{RealT<:Real} <: AbstractEquations{1,5}
             T0,
             v0,
             Ti_LI,
+            cross_section,
+            height_profile,
+            boundary_temperature,
         )
     end
 end
-#Reference for the TME:
-#- Marx, Oliver P. and Gasser, Ingenuin and Annika Schmidgall (2026)
+# Reference for the TME:
+#- Marx, Oliver P. and Gasser, Ingenuin and Schmidgall, Annika (2026)
 #  ...
 #  [DOI: ...](https://doi.org/...)
 
 @doc raw"""
-    termite_parameters(r, height; g=9.81, p0=1e5, R=8.314, M=0.0289652, c_v=20.85, α_w = 1.1, D0 = 0.05, ρₕ₀ = 0.982, η = 0.93, uᵣ = 0.05, ρᵣ = 1.17, pᵣ = 1, c_v_ = 790, κ = 0.184, T_ref = 297.76980029566033, t_ref = 0.0033582989242263127, T0 = 27.0, v0 = -5.0)
+    termite_parameters(r, height; g=9.81, R=8.314, M=0.0289652, c_v=20.85, α_w = 1.1, D0 = 0.05, ρₕ₀ = 0.982, η = 0.93, uᵣ = 0.05, ρᵣ = 1.17, pᵣ = 1, c_v_ = 790, κ = 0.184, T_ref = 297.76980029566033, t_ref = 0.0033582989242263127, T0 = 27.0, v0 = -5.0)
 
-Initializes the parameters for the termite mound model based on the given radius and height of the mound.
+Computes the (scaled) parameters of the termite mound model for a mound with radius `r` and
+height `height` (both in m).
+
+The main steps are:
+- geometry: channel length ``L`` and transitions ``x_a, x_b, x_c`` ([`mound_geometry`](@ref)),
+- reference scales: ``x_r = L``, ``t_r = L/u_r``, ``Fr^2 = u_r^2/(gL)``,
+- adiabatic exponent ``\gamma = (c_v + R)/c_v`` with the specific gas constant ``R/M`` and
+  ``c_v/M``,
+- friction coefficient ``\beta = \lambda_w x_r \sqrt{\pi}/(4\sqrt{A_r})`` with the pipe
+  friction coefficient ``\lambda_w = 64/Rey``, the Reynolds number ``Rey`` and the cross section
+  ``A_r = \pi (D_0/2)^2``,
+- wall heat transfer coefficient
+  ``k_w = (\gamma - 1) x_r \alpha_w T_r \sqrt{\pi}/(\sqrt{A_r} u_r p_r)``,
+- heat exchange rate ``k_i = t_r \kappa L_i/(c_i m)`` with the thermal conductivity
+  ``\kappa`` (`κ`), the specific heat capacity ``c_i`` (`c_v_`) and the mass ``m`` of the
+  mound material, and the length ``L_i = x_r (x_c - x_a)`` of the channel inside the mound,
+- initial mound material temperature profile ``T_i`` ([`Get_initial_Ti`](@ref)).
 
 ### Parameters
-- `r`: Position variable.
-- `height`: Height of the termite mound.
+- `r`: radius of the mound (m).
+- `height`: height of the mound (m).
 
-### Optional Parameters
-- `g`: Gravitational acceleration (default: 9.81 m/s²).
-- `p0`: Reference pressure (default: 1e5 Pa).
-- `R`: Universal gas constant (default: 8.314 J/(mol·K)).
-- `M`: Molar mass of air (default: 0.0289652 kg/mol).
-- `c_v`: Specific heat capacity at constant volume (default: 20.85 J/(mol·K)).
-- `α_w`: Heat transfer coefficient (default: 1.1).
-- `D0`: Diameter of the flow channel (default: 0.05 m).
-- `ρₕ₀`: Reference density (default: 0.982 kg/m³).
-- `η`: Viscosity (default: 0.93).
-- `uᵣ`: Reference velocity (default: 0.05 m/s).
-- `ρᵣ`: Reference density (default: 1.17 kg/m³).
-- `pᵣ`: Reference pressure (default: 1 Pa).
-- `c_v_`: Specific heat capacity of the mound material (default: 790 J/(kg·K)).
-- `κ`: Thermal conductivity of the mound material (default: 0.184 W/(m·K)).
-- `T_ref`: Reference temperature (default: 297.76980029566033 K).
-- `t_ref`: Reference time (default: 0.0033582989242263127 s).
-- `T0`: Initial temperature (default: 27.0 °C).
-- `v0`: Initial velocity (default: -5.0 m/s).
+### Optional parameters
+- `g`: gravitational acceleration (default: 9.81 m/s²).
+- `R`: universal gas constant (default: 8.314 J/(mol·K)).
+- `M`: molar mass of air (default: 0.0289652 kg/mol).
+- `c_v`: molar heat capacity of air at constant volume (default: 20.85 J/(mol·K)).
+- `α_w`: wall heat transfer coefficient (default: 1.1). It is made variable in space by the
+  factor [`I_w`](@ref) in the equations.
+- `D0`: diameter of the flow channel (default: 0.05 m).
+- `ρₕ₀`: scaled reference density of the buoyancy term (default: 0.982).
+- `η`: viscosity (default: 0.93).
+- `uᵣ`: reference velocity (default: 0.05 m/s).
+- `ρᵣ`: reference density (default: 1.17 kg/m³).
+- `pᵣ`: reference pressure (default: 1 Pa).
+- `c_v_`: specific heat capacity of the mound material (default: 790 J/(kg·K)).
+- `κ`: thermal conductivity of the mound material (default: 0.184 W/(m·K)).
+- `T_ref`: reference temperature (default: 297.76980029566033 K).
+- `t_ref`: inverse reference temperature ``1/T_{ref}`` (default: 0.0033582989242263127 1/K).
+- `T0`: initial air temperature (default: 27.0 °C).
+- `v0`: initial velocity (default: -5.0 cm/s).
 
 ### Returns
-A 20-tuple which can be used to create an instance of `TermiteMoundEquations1D`: `(γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI)`.
+A 20-tuple `(γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0,
+Ti_LI)` of the scalar keyword arguments of [`TermiteMoundEquations1D`](@ref). The model data
+`cross_section`, `height_profile` and `boundary_temperature` are not included and are passed
+separately (e.g. [`HeightProfileTermiteMound`](@ref) and
+[`BoundaryTemperatureTermiteMound`](@ref), built from the returned `xa`, `xb`, `xc`, `L`, `h`,
+`tᵣ` and `T_ref`).
 """
 function termite_parameters(
     r,
     height;
     g = 9.81,
-    p0 = 1e5,
     R = 8.314,
     M = 0.0289652,
     c_v = 20.85,
@@ -167,16 +265,11 @@ function termite_parameters(
     v0 = -5.0,
 )
     h = height
-    L = h + 0.3 + sqrt(0.09 + r*r) + sqrt(r*r + h*h)
+    L, xa, xb, xc = mound_geometry(r, h)
     Aᵣ = (D0 / 2)^2 * pi
     xᵣ = L
     tᵣ = L / uᵣ
-    xa = sqrt(0.09 + r*r) / L
-    xb = (sqrt(0.09 + r*r) + sqrt(r*r + h*h)) / L
-    xc = (L - 0.09) / L
-    xd = xc
     Re = 9000 * 2 * sqrt(Aᵣ) / (xᵣ * sqrt(pi))
-    D = D0 / L
     R = R / M
     cᵥ = c_v / M
     γ = (cᵥ + R) / cᵥ
@@ -184,7 +277,6 @@ function termite_parameters(
     𝑇ᵣ = pᵣ / (ρᵣ * R)
     λ_w = 64 / Re
     β = (λ_w * xᵣ * sqrt(pi)) / (2 * 2 * sqrt(Aᵣ))
-    ε = (ρᵣ * (uᵣ^2)) / pᵣ
     k_w = (γ-1) * (xᵣ * α_w * 𝑇ᵣ * sqrt(pi)) / (sqrt(Aᵣ) * uᵣ * pᵣ)
     mass = (1742.448 * (1/3 * pi * r * r * h)) ./ 8
     Li = (xᵣ*(xc-xa))
@@ -215,48 +307,101 @@ function termite_parameters(
 end
 
 @doc raw"""
-    Trixi.varnames(u, ::TermiteMoundEquations1D)
+    mound_geometry(r, h)
 
-Returns the variable names in the termite mound model.
-
-### Parameters
-- `u`: State vector.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+Geometry of the flow channel of a mound with radius `r` and height `h` (both in m):
+```math
+\begin{aligned}
+L &= h + 0.3 + \sqrt{0.09 + r^2} + \sqrt{r^2 + h^2}, \\
+x_a &= \frac{\sqrt{0.09 + r^2}}{L}, \qquad
+x_b = \frac{\sqrt{0.09 + r^2} + \sqrt{r^2 + h^2}}{L}, \qquad
+x_c = \frac{L - 0.09}{L}.
+\end{aligned}
+```
 
 ### Returns
-A 5-tuple of variable names: `("rho", "v1", "p0", "Ti", "x_var")`.
+`(L, xa, xb, xc)`: the channel length `L` (m) and the scaled positions `xa` (soil → flute),
+`xb` (flute → chimney, top of the mound) and `xc` (chimney → soil).
+"""
+function mound_geometry(r, h)
+    L = h + 0.3 + sqrt(0.09 + r * r) + sqrt(r * r + h * h)
+    xa = sqrt(0.09 + r * r) / L
+    xb = (sqrt(0.09 + r * r) + sqrt(r * r + h * h)) / L
+    xc = (L - 0.09) / L
+    return L, xa, xb, xc
+end
+
+@doc raw"""
+    Trixi.varnames(u, ::TermiteMoundEquations1D)
+
+Names of the four variables of the state vector, used for output and plotting.
+
+### Returns
+`("rho", "v1", "p", "Ti")`: density ``\rho``, velocity ``u``, leading-order pressure ``p_0``
+and mound material temperature ``T_i``.
 """
 function varnames(u, ::TermiteMoundEquations1D)
-    return ("rho", "v1", "p", "Ti", "x_var")
+    return ("rho", "v1", "p", "Ti")
 end
 
 @doc raw"""
     Trixi.cons2prim(u, ::TermiteMoundEquations1D)
 
-Returns primitive variables (rho, v1, p, Ti, x_var).
-
-### Parameters
-- `u`: State vector.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+Primitive variables of the state `u`. The state `(rho, v1, p, Ti)` is already stored in
+primitive variables, so this is the identity.
 
 ### Returns
-SVector with primitive variables.
+`u` unchanged.
 """
 function Trixi.cons2prim(u, equations::TermiteMoundEquations1D)
     return u
 end
 
 @doc raw"""
+    Trixi.PlotData1D(u, mesh::TreeMesh, equations::TermiteMoundEquations1D, solver::DGSEM, cache; kwargs...)
+
+Same as Trixi's `PlotData1D`, except for ``T_i``. The mound material temperature is only
+physically meaningful inside the mound, ``x_a < x < x_c`` (see [`T_u`](@ref)). Outside, the
+plot data of `Ti` are set to `NaN`, so that plots only show the relevant part. The solution
+itself is not changed.
+
+This method is used by `PlotData1D(u_ode, semi)`, `PlotData1D(func, semi)` and
+`PlotData1D(sol)`.
+"""
+function Trixi.PlotData1D(
+    u,
+    mesh::TreeMesh,
+    equations::TermiteMoundEquations1D,
+    solver::DGSEM,
+    cache;
+    kwargs...,
+)
+    pd = invoke(
+        Trixi.PlotData1D,
+        Tuple{Any,TreeMesh,Any,Any,Any},
+        u,
+        mesh,
+        equations,
+        solver,
+        cache;
+        kwargs...,
+    )
+    iTi = findfirst(==("Ti"), pd.variable_names)
+    if !isnothing(iTi)
+        outside = .!(equations.xa .< pd.x .< equations.xc)
+        pd.data[outside, iTi] .= NaN
+    end
+    return pd
+end
+
+@doc raw"""
     Trixi.prim2cons(u, ::TermiteMoundEquations1D)
 
-Converts primitive variables (rho, v1, p, Ti, x_var) to conservative variables u = (rho, rho*v1, rho*e_total, Ti, x_var).
-
-### Parameters
-- `prim`: State vector.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+Converts primitive variables `(rho, v1, p, Ti)` to the variables of the state vector. Both are
+identical, so this is the identity.
 
 ### Returns
-SVector with conservative variables.
+`u` unchanged.
 """
 function Trixi.prim2cons(u, equations::TermiteMoundEquations1D)
     return u
@@ -265,17 +410,23 @@ end
 @doc raw"""
     Trixi.cons2entropy(u, ::TermiteMoundEquations1D)
 
-Convert conservative variables to entropy.
-
-### Parameters
-- `u`: State vector.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+Entropy variables of the state `u = (rho, v1, p, Ti)`, used by the `AnalysisCallback` (e.g.
+for the output ``\sum \partial S/\partial U \cdot U_t``). The first three components are the
+entropy variables of the compressible Euler equations, evaluated with ``(\rho, u, p_0)``:
+```math
+w_1 = \frac{\gamma - s}{\gamma - 1} - \frac{\rho u^2}{2 p_0}, \qquad
+w_2 = \frac{\rho u}{p_0}, \qquad
+w_3 = -\frac{\rho}{p_0}, \qquad
+s = \log p_0 - \gamma \log \rho.
+```
+The fourth component is ``T_i``. This is a formal adaptation for the analysis output; it is
+not an entropy of the TME.
 
 ### Returns
-Entropy SVector.
+`SVector(w1, w2, w3, Ti)`.
 """
 function Trixi.cons2entropy(u, equations::TermiteMoundEquations1D)
-    rho, v1, p, Ti, x_var = u
+    rho, v1, p, Ti = u
     rho_v1 = rho * v1
     rho_e_total = p * equations.inv_gamma_minus_one + 0.5f0 * (rho_v1 * v1)
     v_square = v1^2
@@ -284,7 +435,7 @@ function Trixi.cons2entropy(u, equations::TermiteMoundEquations1D)
     w1 = (equations.γ - s) * equations.inv_gamma_minus_one - 0.5f0 * rho_p * v_square
     w2 = rho_p * v1
     w3 = -rho_p
-    return SVector(w1, w2, w3, Ti, x_var)
+    return SVector(w1, w2, w3, Ti)
 end
 
 function Trixi.cons2cons(u, equations::TermiteMoundEquations1D)
@@ -294,15 +445,25 @@ end
 @doc raw"""
     TermiteMoundInitialCondition(x, t, equations::TermiteMoundEquations1D)
 
-Defines the initial state of the system.
+Initial state of the termite mound simulations (independent of `t`):
+```math
+\rho = \frac{1}{T_0}, \qquad u = v_0, \qquad p_0 = 1, \qquad T_i = T_{i,LI}(x),
+```
+with the scaled initial air temperature ``T_0`` (from `T0` in °C), the scaled initial velocity
+``v_0`` (from `v0` in cm/s) and the scaled initial mound material temperature profile
+`Ti_LI` (in °C). Hence ``T = p_0/\rho = T_0`` everywhere.
+
+The constant velocity ``u = v_0`` does not satisfy the velocity constraint in general. The
+"splitting" method replaces it after the first time step, the "coupled" method at
+initialization ([`AlgebraicVelocityCallback`](@ref)).
 
 ### Parameters
-- `x`: Position vector.
-- `t`: Time scalar.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `x`: position (vector with one entry).
+- `t`: time (not used).
+- `equations`: the [`TermiteMoundEquations1D`](@ref).
 
 ### Returns
-Initial Condition as a SVector.
+`SVector(rho, v1, p, Ti)`.
 """
 @inline function TermiteMoundInitialCondition(x, t, equations::TermiteMoundEquations1D)
     RealT = eltype(x)
@@ -311,43 +472,47 @@ Initial Condition as a SVector.
     p0 = 1.0
     Ti_LI = equations.Ti_LI
     Ti = temp2scaled(Ti_LI(x[1]), equations)
-    return SVector(rho, v1, p0, Ti, x[1])
+    return SVector(rho, v1, p0, Ti)
 end
 
 @doc raw"""
     source_terms(u, x, t, equations::TermiteMoundEquations1D)
 
-Defiens the source terms for the TME.
+Source terms of the ``\rho`` and ``T_i`` equations of the TME (handled by Trixi):
+```math
+s = \left( -\frac{A_x}{A} \rho u, \; 0, \; 0, \; k_i (T - T_i) \right), \qquad T = \frac{p_0}{\rho}.
+```
+The first component is the cross section term of the ``\rho`` equation, the last one the heat
+exchange between air and mound material. The `v1` and `p` components are zero: ``u`` and
+``p_0`` are updated by the ODE part of the system ([`GodunovSplittingCallback`](@ref) or
+[`CoupledSourceTerms`](@ref)).
 
 ### Parameters
-- `u`: State vector.
-- `x`: Position vector.
-- `t`: Time scalar.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `u`: state vector `(rho, v1, p, Ti)`.
+- `x`: position (vector with one entry).
+- `t`: time (not used).
+- `equations`: the [`TermiteMoundEquations1D`](@ref).
 
 ### Returns
-Source term as a SVector.
+`SVector(du1, 0, 0, du4)`.
 """
 @inline function source_terms(u, x, t, equations::TermiteMoundEquations1D)
-    rho, v1, p0, Ti, _ = u
-    x_var = x[1]
+    rho, v1, p0, Ti = u
+    x1 = x[1]
     T = p0 / rho
-    du1 = - A_x(x_var, equations) / A(x_var, equations) * rho * v1
+    du1 = - A_x(x1, equations) / A(x1, equations) * rho * v1
     du4 = equations.k_i * (T - Ti)
-    return SVector(du1, 0.0, 0.0, du4, 0.0)
+    return SVector(du1, 0.0, 0.0, du4)
 end
 
 @doc raw"""
     temp2scaled(y, equations::TermiteMoundEquations1D)
 
-Converts a scaled temperature into an unscaled temperature in Celsius.
-
-### Parameters
-- `y`: Scaled temperature.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+Converts a temperature `y` in °C into a scaled temperature, ``(y + 273.15)/T_{ref}``.
+Works for scalars and arrays. Inverse of [`temp2unscaled`](@ref).
 
 ### Returns
-Unscaled temperature in Celsius.
+The scaled temperature.
 """
 @inline function temp2scaled(y, equations::TermiteMoundEquations1D)
     z = 273.15
@@ -359,14 +524,11 @@ end
 @doc raw"""
     temp2unscaled(x, equations::TermiteMoundEquations1D)
 
-Converts an unscaled temperature (Celsius) into a scaled temperature.
-
-### Parameters
-- `x`: Unscaled temperature in Celsius.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+Converts a scaled temperature `x` into a temperature in °C, ``x \, T_{ref} - 273.15``.
+Works for scalars and arrays. Inverse of [`temp2scaled`](@ref).
 
 ### Returns
-Scaled temperature.
+The temperature in °C.
 """
 @inline function temp2unscaled(x, equations::TermiteMoundEquations1D)
     z = 273.15
@@ -376,14 +538,11 @@ end
 @doc raw"""
     vel2scaled(y, equations::TermiteMoundEquations1D)
 
-Converts a scaled velocity into unscaled velocity in cm/s.
-
-### Parameters
-- `y`: Scaled velocity.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+Converts a velocity `y` in cm/s into a scaled velocity, ``y/(100 \, u_r)`` with the reference
+velocity ``u_r`` in m/s. Works for scalars and arrays. Inverse of [`vel2unscaled`](@ref).
 
 ### Returns
-Unscaled velocity in cm/s.
+The scaled velocity.
 """
 @inline function vel2scaled(y, equations::TermiteMoundEquations1D)
     return inv(equations.uᵣ * 100) .* y
@@ -392,332 +551,80 @@ end
 @doc raw"""
     vel2unscaled(x, equations::TermiteMoundEquations1D)
 
-Converts an unscaled velocity (cm/s) into a scaled velocity.
-
-### Parameters
-- `x`: Unscaled velocity.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+Converts a scaled velocity `x` into a velocity in cm/s, ``100 \, u_r \, x``. Works for
+scalars and arrays. Inverse of [`vel2scaled`](@ref).
 
 ### Returns
-Scaled velocity.
+The velocity in cm/s.
 """
 @inline function vel2unscaled(x, equations::TermiteMoundEquations1D)
     return x .* equations.uᵣ * 100
 end
 
 @doc raw"""
+    A(x, equations::TermiteMoundEquations1D)
+    A_x(x, equations::TermiteMoundEquations1D)
+
+Cross section ``A(x)`` and its derivative ``A_x(x)`` of the flow channel at the scalar position
+`x`, given by `equations.cross_section` (see [`CrossSectionConstant`](@ref),
+[`CrossSectionSine`](@ref) and [`CrossSection`](@ref)).
+"""
+@inline A(x, equations::TermiteMoundEquations1D) = A(x, equations.cross_section)
+@inline A_x(x, equations::TermiteMoundEquations1D) = A_x(x, equations.cross_section)
+
+@doc raw"""
     h_x(x, equations::TermiteMoundEquations1D)
 
-Defines the gradient of the height function of the flow channel.
-
-### Parameters
-- `x`: Position vector.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Derivative of the height function.
+Slope ``h_x(x)`` of the height profile of the flow channel at the scalar position `x` (used in
+the buoyancy term of the ``v`` equation), given by `equations.height_profile` (see
+[`HeightProfileTermiteMound`](@ref) and [`HeightProfile`](@ref)).
 """
-@inline function h_x(x, equations::TermiteMoundEquations1D)
-    dy = if x < equations.xa
-        0.3 / (equations.xa * equations.L)
-    elseif x < equations.xb
-        equations.h / (equations.xb - equations.xa) / equations.L
-    else
-        -1.0
-    end
-    return dy
+@inline h_x(x, equations::TermiteMoundEquations1D) = h_x(x, equations.height_profile)
+
+@doc raw"""
+    T_u(t, x, Ti, equations::TermiteMoundEquations1D)
+
+Boundary (wall) temperature ``T_u`` in K at the scaled time `t`, the scalar position `x` and
+the scaled mound material temperature `Ti` at `x`, given by `equations.boundary_temperature`
+(see [`BoundaryTemperatureTermiteMound`](@ref) and [`BoundaryTemperature`](@ref)). Multiply by
+`t_ref` ``= 1/T_{ref}`` to obtain the scaled temperature.
+
+For efficiency, the solvers evaluate the time-only part once for all nodes,
+`time_data = T_u_time(t, equations)`, and then `T_u_node(time_data, x, Ti, equations)` at
+every node; both give the same result as `T_u(t, x, Ti, equations)`.
+"""
+@inline T_u(t, x, Ti, equations::TermiteMoundEquations1D) =
+    T_u(t, x, Ti, equations.boundary_temperature)
+@inline T_u_time(t, equations::TermiteMoundEquations1D) =
+    T_u_time(t, equations.boundary_temperature)
+@inline function T_u_node(time_data, x, Ti, equations::TermiteMoundEquations1D)
+    return T_u_node(time_data, x, Ti, equations.boundary_temperature)
 end
 
 @doc raw"""
-    A(x, ::TermiteMoundEquations1D)
+    I_w(x, equations::TermiteMoundEquations1D)
 
-Defines the cross section of the flow channel.
-
-### Parameters
-- `x`: Position vector.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Cross section at position x.
-"""
-@inline function A(x, ::TermiteMoundEquations1D)
-    return 1.0
-end
-
-@doc raw"""
-    A(x, ::TermiteMoundEquations1D)
-
-Gradient of the cross section function
-
-### Parameters
-- `x`: Position vector.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Derivative of the cross section at x.
-"""
-@inline function A_x(x, ::TermiteMoundEquations1D)
-    return 0.0
-end
-
-@doc raw"""
-    T_u(t_var, x_var, Ti, equations::TermiteMoundEquations1D)
-
-The boundary temperature function is defined piecewise by
+Spatial factor ``I_w(x)`` of the wall heat transfer coefficient. **It makes the heat transfer
+coefficient ``\alpha_w`` variable in space**: the effective coefficient at ``x`` is
+``\alpha_w I_w(x)``. Since ``k_w`` is proportional to ``\alpha_w`` (see
+[`termite_parameters`](@ref)), the heat transfer term of the ``p_0`` equation reads
+``-I_w(x) \, k_w (T - T_u)/\sqrt{A}``.
 ```math
-    \begin{align*}
-		\textrm{T}_\textrm{u}(t,x)  = \begin{cases}
-			\textrm{T}_\textrm{soil}(t) & ,\text{if } x \in [0,x_a] \, \cup \, (x_c, 1]  \quad \text{(soil)} \\
-			\frac{\textrm{T}_\textrm{air}(t) + T_i(t,x) }{2} & ,\text{if } x \in (x_a,x_b]  \quad \text{(flute)} \\
-			T_i(t,x) & ,\text{if } x \in (x_b,x_c]  \quad \text{(chimney).} \\
-		\end{cases}
-	\end{align*}
+I_w(x) = \begin{cases}
+  0.5 & x \le x_a \text{ or } x > x_c \quad \text{(soil)}, \\
+  1 & x_a < x \le x_c \quad \text{(mound: flute and chimney)}.
+\end{cases}
 ```
-It depends on the internal mound temperature ``T_i``, the soil temperature ``T_{soil}`` (at 30cm depth) and the ambient air temperature ``T_{air}``. 
-The parameters ``x_a``, ``x_b`` and ``x_c`` are fixed spatial locations along the flow channel.
+So the heat transfer in the soil sections is half of that inside the mound.
 
 ### Parameters
-- `t_var`: Time variable.
-- `x_var`: Position variable.
-- `Ti`: Inside Material temperature.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Boundary temperature in Kelvin.
+- `x`: position (scalar).
+- `equations`: the [`TermiteMoundEquations1D`](@ref).
 """
-@inline function T_u(t_var, x_var, Ti, equations::TermiteMoundEquations1D)
-    t_var = mod(t_var, 86400 / equations.tᵣ)
-    t_var = t_var/(86400 / equations.tᵣ/24)
-    c0 = T_air(t_var, equations)
-    c1 = T_soil(t_var, equations)
-    c2 = 0.5f0 * (c0 + Ti * equations.T_ref)
-    c3 = Ti * equations.T_ref
-    return ifelse(
-        (x_var ≤ equations.xa) || (x_var ≥ equations.xc),
-        c1,
-        ifelse(x_var ≤ equations.xb, c2, c3),
-    )
-end
-
-@doc raw"""
-    linear_interpolation2(x, y, ::TermiteMoundEquations1D)
-
-Modified version of the `linear_interpolation` function from `Interpolations.jl`.
-Identical knots and nodes are identified and removed to prevent warnings.
-
-### Parameters
-- `x`: Node vector.
-- `y`: Function value vector.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Interpolation object of type `Interpolations.Extrapolation`.
-"""
-@inline function linear_interpolation2(x, y, ::TermiteMoundEquations1D)
-    iunique_indices = unique!(collect(zip(x, y)))[2]
-    x_unique = []
-    y_unique = []
-    seen = Dict{typeof(x[1]),Bool}()
-    for (xi, yi) in zip(x, y)
-        if haskey(seen, xi)
-            continue
-        else
-            push!(x_unique, xi)
-            push!(y_unique, yi)
-            seen[xi] = true
-        end
-    end
-    LI = linear_interpolation(x_unique, y_unique)
-    return LI
-end
-
-@doc raw"""
-    Fourir(a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,t_var,::TermiteMoundEquations1D,)
-
-Evaluates the function
-```math
-    \begin{align*}
-    F(t) &= a_0 + \sum_{i=1}^5 a_{\left(2i-1\right)} cos\left(\frac{12 \pi t}{i}\right) + a_{\left( 2i\right)} sin\left(\frac{12\pi t}{i}\right) 
-    \end{align*}
-```
-
-### Parameters
-- `a0`: Parameter ``a_0``.
-- `a1`: Parameter ``a_1``.
-- `a2`: Parameter ``a_2``.
-- `a3`: Parameter ``a_3``.
-- `a4`: Parameter ``a_4``.
-- `a5`: Parameter ``a_5``.
-- `a6`: Parameter ``a_6``.
-- `a7`: Parameter ``a_7``.
-- `a8`: Parameter ``a_8``.
-- `a9`: Parameter ``a_9``.
-- `a10`: Parameter ``a_{10}``.
-- `t_var`: Scalar time.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Function value.
-"""
-@inline function Fourir(
-    a0,
-    a1,
-    a2,
-    a3,
-    a4,
-    a5,
-    a6,
-    a7,
-    a8,
-    a9,
-    a10,
-    t_var,
-    ::TermiteMoundEquations1D,
-)
-    return a0 +
-           a1 * cos(pi * t_var / 12.0) +
-           a2 * sin(pi * t_var / 12.0) +
-           a3 * cos(pi * t_var / 6.0) +
-           a4 * sin(pi * t_var / 6.0) +
-           a5 * cos(pi * t_var / 4.0) +
-           a6 * sin(pi * t_var / 4.0) +
-           a7 * cos(pi * t_var / 3.0) +
-           a8 * sin(pi * t_var / 3.0) +
-           a9 * cos(pi * t_var / 2.4) +
-           a10 * sin(pi * t_var / 2.4)
-end
-
-@doc raw"""
-    bspline2linear(nodes, vals, t, ti, ::TermiteMoundEquations1D)
-
-Creatares an interpolation polynomial for a flow quantity on the entire space domain.
-
-### Parameters
-- `nodes`: Node vector.
-- `vals`: Node values.
-- `t`: Uniform nodes (length=Nodes).
-- `ti`: Uniform nodes (length>Nodes) .
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Returns an interpolation object of type `Interpolations.Extrapolation`.
-"""
-@inline function bspline2linear(nodes, vals, t, ti, ::TermiteMoundEquations1D)
-    itp = Interpolations.scale(
-        interpolate(hcat(nodes, vals), (BSpline(Cubic(Natural(OnGrid()))), NoInterp())),
-        t,
-        1:2,
-    )
-    nodesitp, valsitp = [itp(t, 1) for t in ti], [itp(t, 2) for t in ti]
-    return linear_interpolation(nodesitp, valsitp)
-end
-
-@doc raw"""
-    T_air(t_var, equations::TermiteMoundEquations1D)
-
-Returns the ambient air temperature ``T_{air}``. 
-Parameters are obtained from a fourier series fit of the mean temperature in Figure 2:
-- Singh, R. K., Sharma, R. V., (2017)
-  Numerical analysis for ground temperature variation
-  [DOI: 10.1186/s40517-017-0082-z](https://doi.org/10.1186/s40517-017-0082-z)
-
-### Parameters
-- `t_var`: Time variable.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Returns ambient air temperature in Kelvin.
-"""
-@inline function T_air(t_var, equations::TermiteMoundEquations1D)
-    a0 = 300.1;
-    a1 = -2.627;
-    a10 = -0.03607;
-    a2 = -6.092;
-    a3 = 0.4451;
-    a4 = 0.2248;
-    a5 = -0.5704;
-    a6 = 0.2365;
-    a7 = 0.02813;
-    a8 = -0.4064;
-    a9 = -0.07545
-    return Fourir(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-        a5,
-        a6,
-        a7,
-        a8,
-        a9,
-        a10,
-        t_var,
-        equations::TermiteMoundEquations1D,
-    )
-end
-
-@doc raw"""
-    T_soil(t_var, equations::TermiteMoundEquations1D)
-
-Returns the soil temperature ``T_{soil}``. 
-The parameters are obtained from a fourier series fit of the mean soil temperature at 30 cm depth in Figure 8 and 9 from:
-- Singh, R. K., Sharma, R. V., (2017)
-  Numerical analysis for ground temperature variation
-  [DOI: 10.1186/s40517-017-0082-z](https://doi.org/10.1186/s40517-017-0082-z)
-
-### Parameters
-- `t_var`: Time variable.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Returns soil temperature in Kelvin.
-"""
-@inline function T_soil(t_var, equations::TermiteMoundEquations1D)
-    a0 = 302.9;
-    a1 = 1.413;
-    a10 = -0.005461;
-    a2 = -0.09037;
-    a3 = -0.08303;
-    a4 = -0.2159;
-    a5 = -0.01125;
-    a6 = 0.01467;
-    a7 = -0.0008037;
-    a8 = -0.01079;
-    a9 = -0.002245
-    return Fourir(
-        a0,
-        a1,
-        a2,
-        a3,
-        a4,
-        a5,
-        a6,
-        a7,
-        a8,
-        a9,
-        a10,
-        t_var,
-        equations::TermiteMoundEquations1D,
-    )
-end
-
-@doc raw"""
-    I_w(x_var, equations::TermiteMoundEquations1D)
-
-This function defines a variable value of ``α_w`` along the spatial domain. 
-
-### Parameters
-- `x_var`: Position variable.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Returns a scalar.
-"""
-@inline function I_w(x_var, equations::TermiteMoundEquations1D)
-    if x_var ≤ equations.xa
+@inline function I_w(x, equations::TermiteMoundEquations1D)
+    if x ≤ equations.xa
         return 0.5
-    elseif x_var ≤ equations.xc
+    elseif x ≤ equations.xc
         return 1.0
     else
         return 0.5
@@ -725,67 +632,49 @@ Returns a scalar.
 end
 
 @doc raw"""
-    unique_idx(x, ::TermiteMoundEquations1D)
-
-This function identifies a set of unique spatial positions given all elements of a discretisation.
-
-### Parameters
-- `x`: Position variable.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Returns a node vector with unique elements and their corresponding indices.
-"""
-@inline function unique_idx(x, ::TermiteMoundEquations1D)
-    y=1:1:length(x)
-    iunique_indices = unique!(collect(zip(x, y)))[2]
-    x_unique = Vector{typeof(x[1])}()
-    y_unique = Vector{Int}()
-    seen = Dict{typeof(x[1]),Bool}()
-    for (xi, yi) in zip(x, y)
-        if haskey(seen, xi)
-            continue
-        else
-            push!(x_unique, xi)
-            push!(y_unique, yi)
-            seen[xi] = true
-        end
-    end
-    return x_unique, y_unique
-end
-
-@doc raw"""
     Trixi.flux(u, orientation::Integer, ::TermiteMoundEquations1D)
 
-Calculate 1D flux for a single point 
+Physical flux of the TME at a single point, ``f(u) = (\rho u, 0, 0, 0)``. Only the ``\rho``
+equation is in conservation form. ``u`` and ``p_0`` are updated by the ODE part of the system,
+and the ``T_i`` equation has no flux.
 
 ### Parameters
-- `u`: State vector.
-- `orientation`: Orientation or normal direction.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
-
-### Returns
-Flux as a SVector.
+- `u`: state vector `(rho, v1, p, Ti)`.
+- `orientation`: orientation (always `1` in 1D).
+- `equations`: the [`TermiteMoundEquations1D`](@ref).
 """
 @inline function Trixi.flux(u, orientation::Integer, equations::TermiteMoundEquations1D)
-    rho, v1, _, _, _ = u
+    rho, v1, _, _ = u
     f1 = rho * v1
-    return SVector(f1, 0.0, 0.0, 0.0, 0.0)
+    return SVector(f1, 0.0, 0.0, 0.0)
 end
 
 @doc raw"""
     flux_ranocha(u_ll, u_rr, orientation::Integer, ::TermiteMoundEquations1D)
 
-Entropy conserving and kinetic energy preserving two-point flux.
+Two-point volume flux for the flux differencing volume integral (`VolumeIntegralFluxDifferencing`),
+built from logarithmic means as in Ranocha's flux for the Euler equations. Only the mass flux
+is nonzero:
+```math
+f_1 = \rho^{\ln} \, \bar u, \qquad
+\bar u = \begin{cases}
+  u^{\ln} & u_{ll}, u_{rr} > 0, \\
+  -(-u)^{\ln} & u_{ll}, u_{rr} < 0, \\
+  \frac{1}{2}(u_{ll} + u_{rr}) & \text{otherwise},
+\end{cases}
+```
+where ``a^{\ln}`` is the logarithmic mean of the left and right values (Trixi's `ln_mean`).
+The logarithmic mean of the velocity is only defined for values of the same sign, so the
+arithmetic mean is used if the sign changes. The flux is consistent: ``f_1 = \rho u`` for
+``u_{ll} = u_{rr}``.
 
 ### Parameters
-- `u_ll`: Left state vector.
-- `u_rr`: Right state vector.
-- `orientation`: Orientation or normal direction.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `u_ll`, `u_rr`: left and right state vectors `(rho, v1, p, Ti)`.
+- `orientation`: orientation (always `1` in 1D).
+- `equations`: the [`TermiteMoundEquations1D`](@ref).
 
 ### Returns
-Flux as a SVector.
+`SVector(f1, 0, 0, 0)`.
 """
 @inline function flux_ranocha(
     u_ll,
@@ -793,8 +682,8 @@ Flux as a SVector.
     orientation::Integer,
     equations::TermiteMoundEquations1D,
 )
-    rho_ll, v1_ll, _, _, _ = u_ll
-    rho_rr, v1_rr, _, _, _ = u_rr
+    rho_ll, v1_ll, _, _ = u_ll
+    rho_rr, v1_rr, _, _ = u_rr
     rho_mean = ln_mean(rho_ll, rho_rr)
     v1_mean = if v1_ll > 0.0 && v1_rr > 0.0
         ln_mean(v1_ll, v1_rr)
@@ -804,24 +693,49 @@ Flux as a SVector.
         0.5f0 * (v1_ll + v1_rr)
     end
     f1 = rho_mean * v1_mean
-    return SVector(f1, 0.0, 0.0, 0.0, 0.0)
+    return SVector(f1, 0.0, 0.0, 0.0)
 end
 
 @doc raw"""
     Trixi.flux_hllc(u_ll, u_rr, orientation, ::TermiteMoundEquations1D)
 
-Computes the 1D HLLC flux (HLL with Contact) for compressible Euler equations developed by E.F. Toro
-[Lecture slides](http://www.prague-sum.com/download/2012/Toro_2-HLLC-RiemannSolver.pdf)
-Signal speeds: [DOI: 10.1137/S1064827593260140](https://doi.org/10.1137/S1064827593260140)
+Surface flux: the mass component of the HLLC flux (HLL with contact) of the compressible
+Euler equations by E. F. Toro, evaluated with ``(\rho, u, p_0)`` (``p_0`` as pressure, total
+energy ``p_0/(\gamma - 1) + \rho u^2/2``, sound speed ``\sqrt{\gamma p_0/\rho}``).
+- [Lecture slides](http://www.prague-sum.com/download/2012/Toro_2-HLLC-RiemannSolver.pdf)
+- Signal speeds (Einfeldt estimates with Roe averages):
+  [DOI: 10.1137/S1064827593260140](https://doi.org/10.1137/S1064827593260140)
+
+Only the mass component is computed, since only the ``\rho`` equation has a flux. It needs:
+- the signal speeds ``S_L = \min(u_{ll} - c_{ll}, \tilde u - \tilde c)`` and
+  ``S_R = \max(u_{rr} + c_{rr}, \tilde u + \tilde c)`` with the Roe averages ``\tilde u`` and
+  ``\tilde c`` (the latter from the Roe-averaged enthalpy, hence the total energy),
+- the contact speed ``S^*`` and the density ``\rho^*`` of the star region on the side of the
+  interface.
+
+The flux is then
+```math
+f_1 = \begin{cases}
+  \rho_{ll} u_{ll} & S_L \ge 0, \\
+  \rho_{rr} u_{rr} & S_R \le 0, \\
+  \rho_{ll} u_{ll} + S_L (\rho^*_{ll} - \rho_{ll}) & S_L \le 0 \le S^*, \\
+  \rho_{rr} u_{rr} + S_R (\rho^*_{rr} - \rho_{rr}) & \text{otherwise},
+\end{cases}
+\qquad \rho^*_K = \rho_K \frac{S_K - u_K}{S_K - S^*}.
+```
+The momentum and energy components of the Euler HLLC flux are not computed. The upwinding
+through the acoustic signal speeds provides the numerical dissipation at element interfaces.
+
+A second method with a `normal_direction::AbstractVector` rotates the velocity to the normal
+direction, calls this method and scales the result by the length of the normal vector.
 
 ### Parameters
-- `u_ll`: Left state vector.
-- `u_rr`: Right state vector.
-- `orientation`: Orientation or normal direction.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `u_ll`, `u_rr`: left and right state vectors `(rho, v1, p, Ti)`.
+- `orientation`: orientation (always `1` in 1D).
+- `equations`: the [`TermiteMoundEquations1D`](@ref).
 
 ### Returns
-Flux as a SVector.
+`SVector(f1, 0, 0, 0)`.
 """
 function Trixi.flux_hllc(
     u_ll,
@@ -829,76 +743,59 @@ function Trixi.flux_hllc(
     orientation::Integer,
     equations::TermiteMoundEquations1D,
 )
-    rho_ll, v1_ll, p0_ll, _, _ = u_ll
-    rho_rr, v1_rr, p0_rr, _, _ = u_rr
+    rho_ll, v1_ll, p0_ll, _ = u_ll
+    rho_rr, v1_rr, p0_rr, _ = u_rr
 
+    # Sound speeds
     c_ll = sqrt(equations.γ * p0_ll / rho_ll)
     c_rr = sqrt(equations.γ * p0_rr / rho_rr)
 
+    # Left and right mass fluxes rho * u
+    f1_ll = rho_ll * v1_ll
+    f1_rr = rho_rr * v1_rr
+
+    # Roe averages of the velocity and the enthalpy (only needed for the signal speeds)
     rho_e_total_ll =
         p0_ll * equations.inv_gamma_minus_one + 0.5f0 * (rho_ll * v1_ll * v1_ll)
     rho_e_total_rr =
         p0_rr * equations.inv_gamma_minus_one + 0.5f0 * (rho_rr * v1_rr * v1_rr)
-    e_ll = rho_e_total_ll / rho_ll
-    e_rr = rho_e_total_rr / rho_rr
-
-    # Obtain left and right fluxes
-    f_ll = flux(u_ll, orientation, equations)
-    f_rr = flux(u_rr, orientation, equations)
-
-    # Compute Roe averages
     sqrt_rho_ll = sqrt(rho_ll)
     sqrt_rho_rr = sqrt(rho_rr)
     sum_sqrt_rho = sqrt_rho_ll + sqrt_rho_rr
-    vel_L = v1_ll
-    vel_R = v1_rr
-    vel_roe = (sqrt_rho_ll * vel_L + sqrt_rho_rr * vel_R) / sum_sqrt_rho
+    vel_roe = (sqrt_rho_ll * v1_ll + sqrt_rho_rr * v1_rr) / sum_sqrt_rho
     ekin_roe = 0.5f0 * vel_roe^2
     H_ll = (rho_e_total_ll + p0_ll) / rho_ll
     H_rr = (rho_e_total_rr + p0_rr) / rho_rr
     H_roe = (sqrt_rho_ll * H_ll + sqrt_rho_rr * H_rr) / sum_sqrt_rho
     c_roe = sqrt((equations.γ - 1) * (H_roe - ekin_roe))
 
-    Ssl = min(vel_L - c_ll, vel_roe - c_roe)
-    Ssr = max(vel_R + c_rr, vel_roe + c_roe)
-    sMu_L = Ssl - vel_L
-    sMu_R = Ssr - vel_R
+    # Signal speeds (Einfeldt)
+    Ssl = min(v1_ll - c_ll, vel_roe - c_roe)
+    Ssr = max(v1_rr + c_rr, vel_roe + c_roe)
+
+    # Mass component of the HLLC flux
     if Ssl >= 0
-        f1 = f_ll[1]
-        f2 = f_ll[2]
-        f3 = f_ll[3]
+        f1 = f1_ll
     elseif Ssr <= 0
-        f1 = f_rr[1]
-        f2 = f_rr[2]
-        f3 = f_rr[3]
+        f1 = f1_rr
     else
+        sMu_L = Ssl - v1_ll
+        sMu_R = Ssr - v1_rr
+        # speed of the contact wave
         SStar =
-            (p0_rr - p0_ll + rho_ll * vel_L * sMu_L - rho_rr * vel_R * sMu_R) /
+            (p0_rr - p0_ll + rho_ll * v1_ll * sMu_L - rho_rr * v1_rr * sMu_R) /
             (rho_ll * sMu_L - rho_rr * sMu_R)
         if Ssl <= 0 <= SStar
+            # density in the left star region
             densStar = rho_ll * sMu_L / (Ssl - SStar)
-            enerStar = e_ll + (SStar - vel_L) * (SStar + p0_ll / (rho_ll * sMu_L))
-            UStar1 = densStar
-            UStar2 = densStar * SStar
-            UStar3 = densStar * enerStar
-
-            f1 = f_ll[1] + Ssl * (UStar1 - rho_ll)
-            f2 = f_ll[2] + Ssl * (UStar2 - rho_ll * v1_ll)
-            f3 = f_ll[3] + Ssl * (UStar3 - rho_e_total_ll)
+            f1 = f1_ll + Ssl * (densStar - rho_ll)
         else
+            # density in the right star region
             densStar = rho_rr * sMu_R / (Ssr - SStar)
-            enerStar = e_rr + (SStar - vel_R) * (SStar + p0_rr / (rho_rr * sMu_R))
-            UStar1 = densStar
-            UStar2 = densStar * SStar
-            UStar3 = densStar * enerStar
-
-            #end
-            f1 = f_rr[1] + Ssr * (UStar1 - rho_rr)
-            f2 = f_rr[2] + Ssr * (UStar2 - rho_rr * v1_rr)
-            f3 = f_rr[3] + Ssr * (UStar3 - rho_e_total_rr)
+            f1 = f1_rr + Ssr * (densStar - rho_rr)
         end
     end
-    return SVector(f1, 0.0, 0.0, 0.0, 0.0)
+    return SVector(f1, 0.0, 0.0, 0.0)
 end
 
 function Trixi.flux_hllc(
@@ -910,28 +807,31 @@ function Trixi.flux_hllc(
     norm_ = abs(normal_direction[1])
     normal_direction_unit = normal_direction[1] * inv(norm_)
     f = Trixi.flux_hllc(
-        SVector(u_ll[1], normal_direction_unit * u_ll[2], u_ll[3], u_ll[4], u_ll[5]),
-        SVector(u_rr[1], normal_direction_unit * u_rr[2], u_rr[3], u_ll[4], u_ll[5]),
+        SVector(u_ll[1], normal_direction_unit * u_ll[2], u_ll[3], u_ll[4]),
+        SVector(u_rr[1], normal_direction_unit * u_rr[2], u_rr[3], u_rr[4]),
         1,
         equations,
     )
-    return SVector(f[1], 0.0, 0.0, 0.0, 0.0) * norm_
+    return SVector(f[1], 0.0, 0.0, 0.0) * norm_
 end
 
 @doc raw"""
     Trixi.max_abs_speeds(u, equations::TermiteMoundEquations1D)
 
-Computes the maximum absolute speed for wave propagation.
+Maximum absolute wave speed at a single point, ``|u| + c`` with the sound speed
+``c = \sqrt{\gamma p_0/\rho}``. Used by the `StepsizeCallback` for the CFL condition. The
+`v1` field must therefore contain the current velocity ``u`` (see
+[`AlgebraicVelocityCallback`](@ref) for the "coupled" method).
 
 ### Parameters
-- `u`: State vector.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `u`: state vector `(rho, v1, p, Ti)`.
+- `equations`: the [`TermiteMoundEquations1D`](@ref).
 
 ### Returns
-Maximum absolute speed.
+`(abs(v1) + c,)` (a 1-tuple in 1D).
 """
 @inline function Trixi.max_abs_speeds(u, equations::TermiteMoundEquations1D)
-    rho, v1, p0, _, _ = u
+    rho, v1, p0, _ = u
     c = sqrt(equations.γ * p0 / rho)
     return (abs(v1) + c,)
 end
@@ -939,16 +839,20 @@ end
 @doc raw"""
     Trixi.max_abs_speed_naive(u_ll, u_rr, orientation::Integer, equations::TermiteMoundEquations1D)
 
-Calculate estimates for maximum wave speed for local Lax-Friedrichs-type dissipation as the maximum velocity magnitude plus the maximum speed of sound.
+Estimate of the maximum wave speed between two states for local Lax-Friedrichs-type
+dissipation:
+```math
+\lambda_{max} = \max(|u_{ll}|, |u_{rr}|) + \max(c_{ll}, c_{rr}), \qquad
+c = \sqrt{\gamma p_0/\rho}.
+```
 
 ### Parameters
-- `u_ll`: Left state vector.
-- `u_rr`: Right state vector.
-- `orientation`: Orientation or normal direction.
-- `::TermiteMoundEquations1D`: Instance of `TermiteMoundEquations1D`.
+- `u_ll`, `u_rr`: left and right state vectors `(rho, v1, p, Ti)`.
+- `orientation`: orientation (always `1` in 1D).
+- `equations`: the [`TermiteMoundEquations1D`](@ref).
 
 ### Returns
-Maximum maximum wave speed estimates.
+The wave speed estimate ``\lambda_{max}``.
 """
 @inline function Trixi.max_abs_speed_naive(
     u_ll,
@@ -956,8 +860,8 @@ Maximum maximum wave speed estimates.
     orientation::Integer,
     equations::TermiteMoundEquations1D,
 )
-    rho_ll, v1_ll, p0_ll, _, _ = u_ll
-    rho_rr, v1_rr, p0_rr, _, _ = u_rr
+    rho_ll, v1_ll, p0_ll, _ = u_ll
+    rho_rr, v1_rr, p0_rr, _ = u_rr
     v_mag_ll = abs(v1_ll)
     v_mag_rr = abs(v1_rr)
     c_ll = sqrt(equations.γ * p0_ll / rho_ll)
@@ -965,1584 +869,114 @@ Maximum maximum wave speed estimates.
     return max(v_mag_ll, v_mag_rr) + max(c_ll, c_rr)
 end
 
-@doc raw"""
-    Get_initial_Ti(r,h)
+# Parameters of the initial Ti profiles on the grid r ∈ TI_RADII, h ∈ TI_HEIGHTS (r-major):
+# Ti(xa), Ti(xb) (maximum), Ti(xc) in °C and the curvature k of the chimney branch.
+# Least-squares fits to quasi-periodic states of multi-day simulations.
+const TI_RADII = range(0.3, 1.5, length = 5)
+const TI_HEIGHTS = range(0.5, 2.5, length = 5)
+const TI_PARAMS = [
+    28.5629 29.1405 28.2099 2.70  # r = 0.3, h = 0.5
+    27.9362 29.2659 27.7738 2.12  # r = 0.3, h = 1.0
+    27.7044 29.3670 27.6229 2.00  # r = 0.3, h = 1.5
+    27.5723 29.4020 27.5393 1.79  # r = 0.3, h = 2.0
+    27.4933 29.4153 27.5071 1.72  # r = 0.3, h = 2.5
+    28.3231 28.6427 28.1880 0.21  # r = 0.6, h = 0.5
+    28.1104 28.8462 27.7681 1.56  # r = 0.6, h = 1.0
+    27.8786 28.9473 27.6172 1.44  # r = 0.6, h = 1.5
+    27.7464 28.9823 27.5336 1.23  # r = 0.6, h = 2.0
+    27.6675 28.9956 27.5014 1.16  # r = 0.6, h = 2.5
+    28.2534 28.7113 27.9918 0.09  # r = 0.9, h = 0.5
+    28.1411 28.6864 27.8398 0.20  # r = 0.9, h = 1.0
+    28.0170 28.8476 27.6526 0.85  # r = 0.9, h = 1.5
+    27.9209 28.8660 27.5965 0.77  # r = 0.9, h = 2.0
+    27.8420 28.8793 27.5643 0.70  # r = 0.9, h = 2.5
+    28.2178 28.7448 27.9002 0.05  # r = 1.2, h = 0.5
+    28.1478 28.7332 27.7618 0.13  # r = 1.2, h = 1.0
+    28.0893 28.8205 27.6681 0.49  # r = 1.2, h = 1.5
+    28.0065 28.8344 27.6180 0.46  # r = 1.2, h = 2.0
+    27.9332 28.8399 27.5842 0.46  # r = 1.2, h = 2.5
+    28.1954 28.7674 27.8552 0.05  # r = 1.5, h = 0.5
+    28.1575 28.7612 27.7262 0.09  # r = 1.5, h = 1.0
+    27.8388 28.5208 27.3742 0.28  # r = 1.5, h = 1.5
+    28.0540 28.8197 27.6209 0.30  # r = 1.5, h = 2.0
+    27.9961 28.8307 27.5987 0.32  # r = 1.5, h = 2.5
+]
 
-Computes an initial profile for the termite mound material temperature.
+@doc raw"""
+    Ti_profile(x, Ta, Tb, Tc, k, xa, xb, xc)
+
+Initial mound material temperature (°C) at position `x`:
+```math
+T_i(x) = \begin{cases}
+  T_a & x \le x_a, \\
+  T_a + (T_b - T_a) \dfrac{x - x_a}{x_b - x_a} & x_a < x \le x_b \quad \text{(flute)}, \\[1ex]
+  T_c + (T_b - T_c) \dfrac{e^{-k\eta} - e^{-k}}{1 - e^{-k}},
+    \quad \eta = \dfrac{x - x_b}{x_c - x_b} & x_b < x < x_c \quad \text{(chimney)}, \\[1ex]
+  T_c & x \ge x_c.
+\end{cases}
+```
+The profile rises linearly from `Ta` at `xa` to the maximum `Tb` at the top of the mound `xb`,
+then decays to `Tc` at `xc` with curvature `k`. The decay is linear for `k < 1e-8`. Outside of
+``[x_a, x_c]``, the profile is constant; there ``T_i`` does not enter the model.
+"""
+function Ti_profile(x, Ta, Tb, Tc, k, xa, xb, xc)
+    if x <= xa
+        return Ta
+    elseif x <= xb
+        return Ta + (Tb - Ta) * (x - xa) / (xb - xa)
+    elseif x < xc
+        η = (x - xb) / (xc - xb)
+        g = k < 1e-8 ? 1 - η : (exp(-k * η) - exp(-k)) / (1 - exp(-k))
+        return Tc + (Tb - Tc) * g
+    else
+        return Tc
+    end
+end
+
+@doc raw"""
+    Get_initial_Ti(r, h; n_samples = 513)
+
+Initial profile of the mound material temperature (°C) of a mound with radius `r` and height
+`h` (both in m). The steps are:
+1. The four profile parameters `(Ta, Tb, Tc, k)` of [`Ti_profile`](@ref) are bilinearly
+   interpolated in `(r, h)` from the table `TI_PARAMS` on the grid
+   ``r \in \{0.3, 0.6, \dots, 1.5\}``, ``h \in \{0.5, 1.0, \dots, 2.5\}``. Outside of the grid,
+   `r` and `h` are clamped to it.
+2. The positions `xa`, `xb`, `xc` follow from [`mound_geometry`](@ref).
+3. The profile is sampled at `n_samples` equidistant points in ``[0, 1]`` plus `xa`, `xb`,
+   `xc` (so that the kinks are represented exactly).
+
+The table contains least-squares fits to quasi-periodic states of multi-day simulations.
 
 ### Parameters
-- `r`: Radius.
-- `h`: Height.
+- `r`: radius of the mound (m).
+- `h`: height of the mound (m).
+- `n_samples`: number of equidistant sample points (default: 513).
 
 ### Returns
-Initial mound material temperature profile.
+A linear interpolation object on ``[0, 1]`` (constant extrapolation), stored as `Ti_LI` in
+[`TermiteMoundEquations1D`](@ref).
 """
-@inline function Get_initial_Ti(r, h)
-    radius = repeat(range(0.3, 1.5, length = 5), inner = 5)
-    height = repeat(range(0.5, 2.5, length = 5), outer = 5)
-    #
-    d = sqrt.((h .- height) .* (h .- height) .+ (r .- radius) .* (r .- radius))
-    indices = partialsortperm(d, 1:3)
-    #-----------------------
-    L = 59
-    x_nodes = [
-        0.0 - 0.01,
-        0.01724137928429216,
-        0.03448275856858432,
-        0.05172413785287648,
-        0.06896551713716864,
-        0.08620689642146079,
-        0.10344827570575296,
-        0.12068965499004512,
-        0.13793103427433728,
-        0.15517241355862943,
-        0.17241379284292158,
-        0.18965517212721375,
-        0.20689655141150592,
-        0.22413793069579807,
-        0.24137930998009025,
-        0.2586206892643824,
-        0.27586206854867457,
-        0.2931034478329667,
-        0.31034482711725886,
-        0.327586206401551,
-        0.34482758568584315,
-        0.36206896497013535,
-        0.3793103442544275,
-        0.39655172353871965,
-        0.41379310282301185,
-        0.431034482107304,
-        0.44827586139159614,
-        0.4655172406758883,
-        0.4827586199601805,
-        0.49999999924447264,
-        0.5172413800398196,
-        0.5344827593241117,
-        0.5517241386084039,
-        0.568965517892696,
-        0.5862068971769882,
-        0.6034482764612803,
-        0.6206896557455724,
-        0.6379310350298647,
-        0.6551724143141567,
-        0.672413793598449,
-        0.689655172882741,
-        0.7068965521670333,
-        0.7241379314513254,
-        0.7413793107356176,
-        0.7586206900199097,
-        0.775862069304202,
-        0.793103448588494,
-        0.8103448278727863,
-        0.8275862071570784,
-        0.8448275864413706,
-        0.8620689657256627,
-        0.879310345009955,
-        0.896551724294247,
-        0.9137931035785393,
-        0.9310344828628313,
-        0.9482758621471236,
-        0.9655172414314157,
-        0.9827586207157079,
-        1.0 + 0.01,
-    ]
-    #
-    Ti_nodes = [
-        28.23504,
-        28.24854,
-        28.2603,
-        28.27932,
-        28.30313,
-        28.32146,
-        28.352,
-        28.37851,
-        28.40667,
-        28.44043,
-        28.46562,
-        28.493,
-        28.52394,
-        28.54661,
-        28.56162,
-        28.58747,
-        28.61179,
-        28.65293,
-        28.68866,
-        28.72606,
-        28.76907,
-        28.80143,
-        28.83948,
-        28.87612,
-        28.90827,
-        28.9403,
-        28.97229,
-        28.99424,
-        29.02249,
-        29.04487,
-        29.06487,
-        29.08654,
-        29.10762,
-        29.01846,
-        28.94056,
-        28.85611,
-        28.78886,
-        28.71523,
-        28.65694,
-        28.60124,
-        28.54943,
-        28.50739,
-        28.46231,
-        28.4302,
-        28.39451,
-        28.36893,
-        28.33991,
-        28.32093,
-        28.29723,
-        28.27613,
-        28.26401,
-        28.24798,
-        28.23728,
-        28.22631,
-        28.2168,
-        28.21413,
-        28.2252,
-        28.22935,
-        28.23554, #(0.3,0.5)
-        27.79809,
-        27.84502,
-        27.84236,
-        27.87441,
-        27.89791,
-        27.89935,
-        27.92542,
-        27.94715,
-        27.94471,
-        27.98999,
-        27.99849,
-        28.03158,
-        28.11743,
-        28.16103,
-        28.2382,
-        28.31142,
-        28.35178,
-        28.42888,
-        28.49105,
-        28.54406,
-        28.62861,
-        28.67002,
-        28.72748,
-        28.81453,
-        28.86118,
-        28.94161,
-        29.0064,
-        29.04931,
-        29.11936,
-        29.17503,
-        29.22284,
-        29.15951,
-        29.06082,
-        28.94513,
-        28.87321,
-        28.75728,
-        28.69724,
-        28.59564,
-        28.50387,
-        28.44228,
-        28.35882,
-        28.29866,
-        28.2329,
-        28.17285,
-        28.11612,
-        28.08835,
-        28.02479,
-        28.01704,
-        27.96112,
-        27.90227,
-        27.90614,
-        27.86709,
-        27.85282,
-        27.83702,
-        27.80976,
-        27.80146,
-        27.81828,
-        27.80705,
-        27.8447, # (0.3,1.0)
-        26.76962,
-        27.02072,
-        27.13626,
-        27.28637,
-        27.42188,
-        27.52772,
-        27.65674,
-        27.77664,
-        27.86458,
-        28.00237,
-        28.09353,
-        28.20786,
-        28.3781,
-        28.49621,
-        28.64792,
-        28.79019,
-        28.89112,
-        29.02856,
-        29.14557,
-        29.24764,
-        29.38083,
-        29.46071,
-        29.55417,
-        29.67744,
-        29.75057,
-        29.85778,
-        29.94227,
-        29.99802,
-        30.07975,
-        30.14199,
-        30.18743,
-        30.11493,
-        30.00014,
-        29.86174,
-        29.76636,
-        29.61698,
-        29.52498,
-        29.38162,
-        29.24356,
-        29.13621,
-        28.99941,
-        28.88447,
-        28.75934,
-        28.63533,
-        28.51201,
-        28.4166,
-        28.27711,
-        28.1959,
-        28.05541,
-        27.90661,
-        27.82556,
-        27.69167,
-        27.58072,
-        27.46397,
-        27.32869,
-        27.21158,
-        27.11712,
-        26.9857,
-        26.82973, # (0.3,1.5)
-        26.76962,
-        27.02072,
-        27.13626,
-        27.28637,
-        27.42188,
-        27.52772,
-        27.65674,
-        27.77664,
-        27.86458,
-        28.00237,
-        28.09353,
-        28.20786,
-        28.3781,
-        28.49621,
-        28.64792,
-        28.79019,
-        28.89112,
-        29.02856,
-        29.14557,
-        29.24764,
-        29.38083,
-        29.46071,
-        29.55417,
-        29.67744,
-        29.75057,
-        29.85778,
-        29.94227,
-        29.99802,
-        30.07975,
-        30.14199,
-        30.18743,
-        30.11493,
-        30.00014,
-        29.86174,
-        29.76636,
-        29.61698,
-        29.52498,
-        29.38162,
-        29.24356,
-        29.13621,
-        28.99941,
-        28.88447,
-        28.75934,
-        28.63533,
-        28.51201,
-        28.4166,
-        28.27711,
-        28.1959,
-        28.05541,
-        27.90661,
-        27.82556,
-        27.69167,
-        27.58072,
-        27.46397,
-        27.32869,
-        27.21158,
-        27.11712,
-        26.9857,
-        26.82973, # (0.3,2.0)
-        25.33514,
-        25.41081,
-        25.42029,
-        25.46819,
-        25.50536,
-        25.5167,
-        25.55509,
-        25.58822,
-        25.59324,
-        25.65197,
-        25.66792,
-        25.7109,
-        25.81365,
-        25.86813,
-        25.96006,
-        26.0464,
-        26.09526,
-        26.1845,
-        26.25716,
-        26.31873,
-        26.41528,
-        26.46238,
-        26.52692,
-        26.62512,
-        26.67704,
-        26.76689,
-        26.83788,
-        26.88399,
-        26.95993,
-        27.02025,
-        27.06761,
-        27.0009,
-        26.89575,
-        26.77085,
-        26.69283,
-        26.56466,
-        26.49773,
-        26.38329,
-        26.27801,
-        26.2073,
-        26.111,
-        26.04041,
-        25.96348,
-        25.89154,
-        25.82415,
-        25.78852,
-        25.71266,
-        25.69894,
-        25.6298,
-        25.55621,
-        25.55422,
-        25.50325,
-        25.47907,
-        25.45295,
-        25.41217,
-        25.3934,
-        25.40115,
-        25.37579,
-        25.39525, # (0.3,2.5)
-        28.1447,
-        28.17847,
-        28.18031,
-        28.20101,
-        28.21343,
-        28.21585,
-        28.22851,
-        28.24205,
-        28.24341,
-        28.27186,
-        28.26418,
-        28.26109,
-        28.28798,
-        28.28416,
-        28.30218,
-        28.30879,
-        28.30828,
-        28.31717,
-        28.33369,
-        28.34302,
-        28.37035,
-        28.37604,
-        28.38723,
-        28.4197,
-        28.42607,
-        28.45557,
-        28.47101,
-        28.48135,
-        28.49978,
-        28.51217,
-        28.52429,
-        28.54234,
-        28.55207,
-        28.56653,
-        28.59493,
-        28.59983,
-        28.63078,
-        28.63864,
-        28.61754,
-        28.60042,
-        28.56663,
-        28.54137,
-        28.51807,
-        28.48473,
-        28.46115,
-        28.44734,
-        28.41223,
-        28.40732,
-        28.37244,
-        28.33228,
-        28.3279,
-        28.29618,
-        28.27529,
-        28.25416,
-        28.22055,
-        28.19694,
-        28.17875,
-        28.14127,
-        28.13574, # (0.6,0.5)
-        27.74362,
-        27.7768,
-        27.79531,
-        27.82542,
-        27.85404,
-        27.87452,
-        27.90462,
-        27.93239,
-        27.95426,
-        27.98989,
-        28.00436,
-        28.01994,
-        28.05219,
-        28.08232,
-        28.13185,
-        28.18214,
-        28.21832,
-        28.26705,
-        28.30829,
-        28.34507,
-        28.39083,
-        28.42114,
-        28.45532,
-        28.49846,
-        28.52744,
-        28.56705,
-        28.60042,
-        28.6273,
-        28.66118,
-        28.68975,
-        28.71813,
-        28.75073,
-        28.77622,
-        28.80737,
-        28.81408,
-        28.71644,
-        28.63961,
-        28.55522,
-        28.4844,
-        28.42624,
-        28.36455,
-        28.31384,
-        28.2619,
-        28.21439,
-        28.16813,
-        28.13224,
-        28.08511,
-        28.05636,
-        28.01218,
-        27.967,
-        27.94228,
-        27.90345,
-        27.87267,
-        27.84113,
-        27.80594,
-        27.77609,
-        27.75191,
-        27.72336,
-        27.71057, # (0.6,1.0)
-        27.60338,
-        27.6521,
-        27.66525,
-        27.70175,
-        27.73062,
-        27.74434,
-        27.77286,
-        27.79937,
-        27.81013,
-        27.85052,
-        27.87218,
-        27.91107,
-        27.98736,
-        28.02825,
-        28.09247,
-        28.14913,
-        28.18473,
-        28.24032,
-        28.28754,
-        28.32653,
-        28.38657,
-        28.4186,
-        28.45851,
-        28.52304,
-        28.55686,
-        28.6176,
-        28.66483,
-        28.70108,
-        28.75334,
-        28.79516,
-        28.83918,
-        28.89067,
-        28.93779,
-        28.84318,
-        28.7653,
-        28.66285,
-        28.60411,
-        28.51903,
-        28.44025,
-        28.38581,
-        28.31426,
-        28.25902,
-        28.20052,
-        28.14271,
-        28.08848,
-        28.05303,
-        27.9914,
-        27.96856,
-        27.91064,
-        27.84882,
-        27.83203,
-        27.78318,
-        27.75148,
-        27.71812,
-        27.67551,
-        27.64475,
-        27.62573,
-        27.5872,
-        27.58902, # (0.6,1.5)
-        27.53453,
-        27.60395,
-        27.60689,
-        27.6511,
-        27.67874,
-        27.68105,
-        27.70588,
-        27.72783,
-        27.7461,
-        27.83882,
-        27.85773,
-        27.88896,
-        27.98571,
-        28.01623,
-        28.09144,
-        28.14882,
-        28.17746,
-        28.23518,
-        28.2837,
-        28.31733,
-        28.38886,
-        28.41397,
-        28.45107,
-        28.53619,
-        28.5652,
-        28.64532,
-        28.6997,
-        28.73864,
-        28.80437,
-        28.8523,
-        28.90805,
-        28.98715,
-        28.94157,
-        28.82213,
-        28.76084,
-        28.64946,
-        28.60677,
-        28.51538,
-        28.4242,
-        28.37775,
-        28.29563,
-        28.23852,
-        28.17721,
-        28.10925,
-        28.05075,
-        28.0219,
-        27.94565,
-        27.9375,
-        27.86561,
-        27.78473,
-        27.78494,
-        27.72628,
-        27.69709,
-        27.66542,
-        27.61444,
-        27.58522,
-        27.57547,
-        27.52783,
-        27.55033, # (0.6,2.0)
-        25.27101,
-        25.5184,
-        25.63169,
-        25.77962,
-        25.91305,
-        26.01688,
-        26.14398,
-        26.26205,
-        26.34823,
-        26.48434,
-        26.57391,
-        26.68672,
-        26.85553,
-        26.9723,
-        27.12274,
-        27.26382,
-        27.36364,
-        27.50007,
-        27.61614,
-        27.71734,
-        27.84976,
-        27.92894,
-        28.0218,
-        28.14453,
-        28.21722,
-        28.32405,
-        28.40825,
-        28.4638,
-        28.5454,
-        28.60761,
-        28.65308,
-        28.58071,
-        28.46612,
-        28.32801,
-        28.23301,
-        28.08407,
-        27.99261,
-        27.84985,
-        27.71249,
-        27.60591,
-        27.46998,
-        27.35598,
-        27.23186,
-        27.10896,
-        26.98683,
-        26.89269,
-        26.75454,
-        26.67476,
-        26.53579,
-        26.38858,
-        26.30921,
-        26.17708,
-        26.06796,
-        25.95313,
-        25.81986,
-        25.70483,
-        25.61255,
-        25.48338,
-        25.33112, # (0.6,2.5)
-        27.94673,
-        27.9788,
-        27.98939,
-        28.01259,
-        28.03014,
-        28.04101,
-        28.05859,
-        28.07679,
-        28.0867,
-        28.11476,
-        28.11851,
-        28.12526,
-        28.15209,
-        28.15823,
-        28.17904,
-        28.19198,
-        28.20037,
-        28.21327,
-        28.22622,
-        28.23279,
-        28.25837,
-        28.27269,
-        28.29104,
-        28.32355,
-        28.33869,
-        28.36926,
-        28.39067,
-        28.40829,
-        28.43178,
-        28.45102,
-        28.47008,
-        28.49339,
-        28.51067,
-        28.5316,
-        28.5616,
-        28.57598,
-        28.6077,
-        28.62496,
-        28.63842,
-        28.66614,
-        28.68179,
-        28.69951,
-        28.67389,
-        28.61843,
-        28.56946,
-        28.52748,
-        28.47133,
-        28.43571,
-        28.38012,
-        28.32121,
-        28.28644,
-        28.23343,
-        28.18777,
-        28.14206,
-        28.08791,
-        28.04088,
-        27.99772,
-        27.94073,
-        27.9052, # (0.9,0.5)
-        27.82388,
-        27.86351,
-        27.87725,
-        27.90617,
-        27.92829,
-        27.94232,
-        27.96445,
-        27.98731,
-        28.00016,
-        28.03487,
-        28.04025,
-        28.04924,
-        28.08239,
-        28.09058,
-        28.11639,
-        28.13277,
-        28.1519,
-        28.18025,
-        28.20694,
-        28.22723,
-        28.26222,
-        28.27944,
-        28.30133,
-        28.34024,
-        28.35808,
-        28.3945,
-        28.4196,
-        28.44032,
-        28.46765,
-        28.48999,
-        28.51186,
-        28.53856,
-        28.55827,
-        28.58175,
-        28.61632,
-        28.63167,
-        28.66818,
-        28.67765,
-        28.6316,
-        28.59277,
-        28.54064,
-        28.49569,
-        28.45248,
-        28.40154,
-        28.35873,
-        28.32407,
-        28.27241,
-        28.24541,
-        28.19434,
-        28.1392,
-        28.11309,
-        28.06499,
-        28.02558,
-        27.98619,
-        27.93638,
-        27.89521,
-        27.85945,
-        27.80637,
-        27.77871, # (0.9,1.0)
-        27.65638,
-        27.68537,
-        27.71369,
-        27.7431,
-        27.77286,
-        27.80028,
-        27.82893,
-        27.856,
-        27.88137,
-        27.90729,
-        27.92941,
-        27.95038,
-        27.97462,
-        28.01711,
-        28.06366,
-        28.11186,
-        28.15077,
-        28.19476,
-        28.2337,
-        28.27206,
-        28.31151,
-        28.34696,
-        28.38501,
-        28.4215,
-        28.45741,
-        28.49402,
-        28.53172,
-        28.56647,
-        28.60404,
-        28.6654,
-        28.68209,
-        28.70353,
-        28.75374,
-        28.80652,
-        28.82821,
-        28.80444,
-        28.72639,
-        28.6468,
-        28.57838,
-        28.51463,
-        28.45264,
-        28.39569,
-        28.33764,
-        28.28442,
-        28.22991,
-        28.17901,
-        28.12685,
-        28.07819,
-        28.0279,
-        27.97858,
-        27.93242,
-        27.88503,
-        27.83961,
-        27.7942,
-        27.7496,
-        27.70597,
-        27.66382,
-        27.62232,
-        27.58368, # (0.9,1.5)
-        27.61748,
-        27.65667,
-        27.68136,
-        27.71505,
-        27.74514,
-        27.76847,
-        27.79673,
-        27.82382,
-        27.84317,
-        27.87453,
-        27.89204,
-        27.93494,
-        27.99143,
-        28.0325,
-        28.08133,
-        28.1272,
-        28.16212,
-        28.2062,
-        28.2458,
-        28.28203,
-        28.32723,
-        28.36026,
-        28.39743,
-        28.44468,
-        28.48092,
-        28.52668,
-        28.56892,
-        28.60467,
-        28.65025,
-        28.68293,
-        28.73019,
-        28.77986,
-        28.81708,
-        28.85626,
-        28.82235,
-        28.73197,
-        28.66639,
-        28.59247,
-        28.5245,
-        28.46735,
-        28.40402,
-        28.34827,
-        28.2912,
-        28.23526,
-        28.18077,
-        28.13456,
-        28.07766,
-        28.03726,
-        27.98248,
-        27.92656,
-        27.88954,
-        27.83954,
-        27.7969,
-        27.75389,
-        27.70714,
-        27.66571,
-        27.62919,
-        27.58538,
-        27.55779, # (0.9,2.0)
-        27.60315,
-        27.64006,
-        27.66654,
-        27.69903,
-        27.72828,
-        27.75205,
-        27.77767,
-        27.80183,
-        27.8175,
-        27.85726,
-        27.89868,
-        27.94319,
-        27.99642,
-        28.03828,
-        28.08502,
-        28.13022,
-        28.16608,
-        28.20987,
-        28.24955,
-        28.28739,
-        28.33227,
-        28.36746,
-        28.40541,
-        28.45413,
-        28.49716,
-        28.54214,
-        28.58921,
-        28.62782,
-        28.67963,
-        28.69745,
-        28.76675,
-        28.84082,
-        28.87189,
-        28.8647,
-        28.78455,
-        28.70063,
-        28.63725,
-        28.56706,
-        28.50136,
-        28.44425,
-        28.382,
-        28.32638,
-        28.26851,
-        28.2133,
-        28.15771,
-        28.10943,
-        28.05316,
-        28.00959,
-        27.95581,
-        27.90194,
-        27.8624,
-        27.81397,
-        27.77163,
-        27.72941,
-        27.68514,
-        27.64521,
-        27.60911,
-        27.56808,
-        27.53846, # (0.9,2.5)
-        27.85149,
-        27.885,
-        27.89765,
-        27.92256,
-        27.942,
-        27.95493,
-        27.97443,
-        27.9945,
-        28.00654,
-        28.03621,
-        28.04226,
-        28.05122,
-        28.07968,
-        28.08804,
-        28.11061,
-        28.12556,
-        28.13602,
-        28.15088,
-        28.16578,
-        28.17452,
-        28.19436,
-        28.20019,
-        28.21912,
-        28.25326,
-        28.27061,
-        28.30292,
-        28.32648,
-        28.34623,
-        28.3719,
-        28.39339,
-        28.41471,
-        28.44034,
-        28.4599,
-        28.48329,
-        28.51535,
-        28.53236,
-        28.56615,
-        28.58601,
-        28.60206,
-        28.63208,
-        28.6503,
-        28.67334,
-        28.69783,
-        28.71452,
-        28.72509,
-        28.68382,
-        28.60659,
-        28.54987,
-        28.47387,
-        28.39486,
-        28.33941,
-        28.26636,
-        28.20051,
-        28.13471,
-        28.06068,
-        27.99365,
-        27.93103,
-        27.85446,
-        27.79838, # (1.2,0.5)
-        27.75316,
-        27.78964,
-        27.80753,
-        27.83631,
-        27.86019,
-        27.87826,
-        27.90212,
-        27.9265,
-        27.94368,
-        27.97654,
-        27.98833,
-        28.00269,
-        28.03438,
-        28.04814,
-        28.07454,
-        28.09408,
-        28.10967,
-        28.13066,
-        28.15769,
-        28.18073,
-        28.21441,
-        28.23523,
-        28.25962,
-        28.29613,
-        28.31765,
-        28.35245,
-        28.3793,
-        28.40279,
-        28.43131,
-        28.45614,
-        28.48062,
-        28.50876,
-        28.53156,
-        28.55738,
-        28.59096,
-        28.61084,
-        28.64565,
-        28.66767,
-        28.68653,
-        28.71433,
-        28.70351,
-        28.6442,
-        28.58636,
-        28.52334,
-        28.46615,
-        28.41503,
-        28.35182,
-        28.30648,
-        28.24397,
-        28.17868,
-        28.13431,
-        28.07425,
-        28.02043,
-        27.96673,
-        27.90544,
-        27.85043,
-        27.79919,
-        27.73611,
-        27.69057, # (1.2,1.0)
-        27.62755,
-        27.72218,
-        27.71783,
-        27.77453,
-        27.80674,
-        27.80853,
-        27.84386,
-        27.88187,
-        27.88388,
-        27.9691,
-        27.94578,
-        27.9341,
-        28.01787,
-        28.00395,
-        28.066,
-        28.11192,
-        28.12774,
-        28.17142,
-        28.20682,
-        28.22158,
-        28.28329,
-        28.29013,
-        28.30471,
-        28.38445,
-        28.38601,
-        28.45814,
-        28.48652,
-        28.50446,
-        28.54258,
-        28.56347,
-        28.58934,
-        28.62498,
-        28.6464,
-        28.67405,
-        28.74567,
-        28.74921,
-        28.82901,
-        28.82477,
-        28.7163,
-        28.67367,
-        28.58378,
-        28.52668,
-        28.46749,
-        28.39071,
-        28.33157,
-        28.30737,
-        28.21849,
-        28.21917,
-        28.13169,
-        28.02636,
-        28.03242,
-        27.95305,
-        27.91197,
-        27.86529,
-        27.7875,
-        27.73774,
-        27.71387,
-        27.62981,
-        27.64552, # (1.2,1.5)
-        27.62426,
-        27.69118,
-        27.70352,
-        27.74962,
-        27.78201,
-        27.79652,
-        27.82961,
-        27.86357,
-        27.87661,
-        27.93567,
-        27.9323,
-        27.93458,
-        27.9932,
-        28.0126,
-        28.0734,
-        28.11584,
-        28.1408,
-        28.18178,
-        28.21891,
-        28.24372,
-        28.2959,
-        28.31537,
-        28.33924,
-        28.40323,
-        28.42064,
-        28.47951,
-        28.51388,
-        28.54086,
-        28.58098,
-        28.60879,
-        28.64378,
-        28.68433,
-        28.71551,
-        28.74965,
-        28.81164,
-        28.81688,
-        28.79531,
-        28.71035,
-        28.62665,
-        28.58078,
-        28.50623,
-        28.45109,
-        28.39399,
-        28.32783,
-        28.27123,
-        28.23551,
-        28.16258,
-        28.14147,
-        28.07007,
-        27.98908,
-        27.97168,
-        27.90621,
-        27.86258,
-        27.81622,
-        27.75252,
-        27.70511,
-        27.67214,
-        27.60629,
-        27.59584, # (1.2,2.0)
-        27.62042,
-        27.6635,
-        27.68911,
-        27.72525,
-        27.75664,
-        27.78126,
-        27.81089,
-        27.84007,
-        27.86073,
-        27.89532,
-        27.90657,
-        27.9375,
-        27.99157,
-        28.02716,
-        28.07342,
-        28.11416,
-        28.14677,
-        28.18626,
-        28.22319,
-        28.25627,
-        28.29871,
-        28.32979,
-        28.36331,
-        28.41002,
-        28.44189,
-        28.48755,
-        28.52655,
-        28.56172,
-        28.6042,
-        28.64102,
-        28.6824,
-        28.72829,
-        28.76671,
-        28.81023,
-        28.84128,
-        28.77519,
-        28.71396,
-        28.6434,
-        28.57619,
-        28.52161,
-        28.4583,
-        28.40262,
-        28.3454,
-        28.28753,
-        28.23159,
-        28.18398,
-        28.12412,
-        28.08216,
-        28.02398,
-        27.96345,
-        27.92452,
-        27.87025,
-        27.82393,
-        27.77706,
-        27.72507,
-        27.67889,
-        27.63768,
-        27.5865,
-        27.55331, # (1.2,2.5)
-        27.80023,
-        27.83692,
-        27.84906,
-        27.87571,
-        27.89602,
-        27.90858,
-        27.92909,
-        27.95022,
-        27.96198,
-        27.99459,
-        27.99932,
-        28.00762,
-        28.03888,
-        28.04651,
-        28.07084,
-        28.08636,
-        28.09632,
-        28.11178,
-        28.12711,
-        28.13522,
-        28.15643,
-        28.16189,
-        28.17005,
-        28.20196,
-        28.2195,
-        28.25428,
-        28.2788,
-        28.29885,
-        28.32598,
-        28.34825,
-        28.37027,
-        28.39759,
-        28.41756,
-        28.44237,
-        28.47729,
-        28.49456,
-        28.53164,
-        28.55234,
-        28.56853,
-        28.60124,
-        28.62006,
-        28.64446,
-        28.67072,
-        28.68762,
-        28.71245,
-        28.74386,
-        28.74146,
-        28.69911,
-        28.60331,
-        28.50367,
-        28.43187,
-        28.33947,
-        28.25562,
-        28.17197,
-        28.07854,
-        27.99348,
-        27.91357,
-        27.8171,
-        27.74474, # (1.5,0.5)
-        27.71995,
-        27.75539,
-        27.77435,
-        27.80299,
-        27.82734,
-        27.8465,
-        27.87088,
-        27.8957,
-        27.91417,
-        27.94659,
-        27.9603,
-        27.97634,
-        28.00775,
-        28.02329,
-        28.05003,
-        28.07075,
-        28.08787,
-        28.1085,
-        28.12918,
-        28.14727,
-        28.17959,
-        28.20106,
-        28.22579,
-        28.26128,
-        28.28353,
-        28.31758,
-        28.34469,
-        28.36876,
-        28.39748,
-        28.42292,
-        28.44806,
-        28.47663,
-        28.5003,
-        28.52695,
-        28.56037,
-        28.58175,
-        28.61636,
-        28.63972,
-        28.66012,
-        28.69125,
-        28.71303,
-        28.73833,
-        28.7367,
-        28.66349,
-        28.594,
-        28.53003,
-        28.45538,
-        28.39667,
-        28.32277,
-        28.24651,
-        28.18886,
-        28.11735,
-        28.05141,
-        27.98564,
-        27.91312,
-        27.84622,
-        27.78265,
-        27.70855,
-        27.65001, # (1.5,1.0)
-        27.37311,
-        27.41537,
-        27.44816,
-        27.47934,
-        27.50404,
-        27.53144,
-        27.56062,
-        27.58385,
-        27.61916,
-        27.64036,
-        27.65625,
-        27.68727,
-        27.7078,
-        27.73585,
-        27.76105,
-        27.78356,
-        27.81698,
-        27.8514,
-        27.88148,
-        27.91754,
-        27.9464,
-        27.97229,
-        28.01013,
-        28.03866,
-        28.07579,
-        28.10941,
-        28.13866,
-        28.17014,
-        28.1985,
-        28.22774,
-        28.25883,
-        28.28827,
-        28.3172,
-        28.35528,
-        28.38474,
-        28.42349,
-        28.45632,
-        28.4819,
-        28.49569,
-        28.46312,
-        28.41239,
-        28.35282,
-        28.287,
-        28.22128,
-        28.16249,
-        28.09545,
-        28.04085,
-        27.97651,
-        27.90396,
-        27.84807,
-        27.78474,
-        27.72495,
-        27.66584,
-        27.6015,
-        27.53967,
-        27.48393,
-        27.42027,
-        27.38208,
-        27.32175, # (1.5,1.5)
-        27.62032,
-        27.70083,
-        27.70544,
-        27.75678,
-        27.78897,
-        27.79811,
-        27.83244,
-        27.86879,
-        27.87708,
-        27.94956,
-        27.93834,
-        27.93678,
-        28.00613,
-        28.0009,
-        28.05546,
-        28.09665,
-        28.11581,
-        28.15651,
-        28.18938,
-        28.20876,
-        28.26481,
-        28.27708,
-        28.2957,
-        28.36524,
-        28.37452,
-        28.43824,
-        28.46873,
-        28.49072,
-        28.52901,
-        28.55384,
-        28.58249,
-        28.61891,
-        28.64442,
-        28.67528,
-        28.73974,
-        28.75189,
-        28.82233,
-        28.82396,
-        28.72758,
-        28.6814,
-        28.59791,
-        28.53947,
-        28.47929,
-        28.4053,
-        28.34487,
-        28.31104,
-        28.22787,
-        28.21301,
-        28.13106,
-        28.03533,
-        28.02491,
-        27.9492,
-        27.90289,
-        27.85231,
-        27.77796,
-        27.725,
-        27.69174,
-        27.61221,
-        27.60854, # (1.5,2.0)
-        27.61401,
-        27.68803,
-        27.69835,
-        27.74792,
-        27.78128,
-        27.7942,
-        27.82845,
-        27.86424,
-        27.87539,
-        27.94132,
-        27.93346,
-        27.93256,
-        27.99732,
-        28.00951,
-        28.07077,
-        28.11026,
-        28.13076,
-        28.17034,
-        28.2065,
-        28.22773,
-        28.28204,
-        28.29779,
-        28.31885,
-        28.38778,
-        28.40113,
-        28.46401,
-        28.49781,
-        28.5228,
-        28.56391,
-        28.59061,
-        28.62509,
-        28.66649,
-        28.69765,
-        28.73271,
-        28.7993,
-        28.81167,
-        28.8183,
-        28.73905,
-        28.65407,
-        28.61217,
-        28.53566,
-        28.48023,
-        28.42265,
-        28.35321,
-        28.29507,
-        28.25989,
-        28.18244,
-        28.16341,
-        28.08734,
-        27.99991,
-        27.98497,
-        27.91504,
-        27.86996,
-        27.82171,
-        27.75327,
-        27.70337,
-        27.6699,
-        27.59778,
-        27.58944,
-    ] # (1.5,2.5)
-    try
-        T1 = Ti_nodes[(indices[1]*L-L+1):(indices[1]*L)]
-        T2 = Ti_nodes[(indices[2]*L-L+1):(indices[2]*L)]
-        T3 = Ti_nodes[(indices[3]*L-L+1):(indices[3]*L)]
-        d_total = d[indices[1]] + d[indices[2]] + d[indices[3]]
-        y_nodes = if d[indices[1]] == 0.0
-            T1
-        else
-            w1 = d_total/d[indices[1]]
-            w2 = d_total/d[indices[2]]
-            w3 = d_total/d[indices[3]]
-            w_total = w1 + w2 + w3
-            (w1 .* T1 .+ w2 .* T2 .+ w3 .* T3) ./ w_total
-        end
-        return linear_interpolation(x_nodes, y_nodes)
-    catch
-        y_nodes = Ti_nodes[1:59]
-        return linear_interpolation(x_nodes, y_nodes)
-    end
+function Get_initial_Ti(r, h; n_samples = 513)
+    rc = clamp(r, first(TI_RADII), last(TI_RADII))
+    hc = clamp(h, first(TI_HEIGHTS), last(TI_HEIGHTS))
+    i = min(searchsortedlast(TI_RADII, rc), length(TI_RADII) - 1)
+    j = min(searchsortedlast(TI_HEIGHTS, hc), length(TI_HEIGHTS) - 1)
+    s = (rc - TI_RADII[i]) / (TI_RADII[i+1] - TI_RADII[i])
+    t = (hc - TI_HEIGHTS[j]) / (TI_HEIGHTS[j+1] - TI_HEIGHTS[j])
+    row(i, j) = TI_PARAMS[(i-1)*length(TI_HEIGHTS)+j, :]
+    Ta, Tb, Tc, k =
+        (1 - s) * (1 - t) * row(i, j) +
+        s * (1 - t) * row(i + 1, j) +
+        (1 - s) * t * row(i, j + 1) +
+        s * t * row(i + 1, j + 1)
+    _, xa, xb, xc = mound_geometry(r, h)
+    x = sort!(unique!(vcat(collect(range(0.0, 1.0, length = n_samples)), xa, xb, xc)))
+    return linear_interpolation(
+        x,
+        Ti_profile.(x, Ta, Tb, Tc, k, xa, xb, xc),
+        extrapolation_bc = Interpolations.Flat(),
+    )
 end
 
 end # @muladd

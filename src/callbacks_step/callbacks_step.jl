@@ -6,7 +6,10 @@
 #! format: noindent
 
 ####################################################################################################
-# Include files with actual implementations for different systems of equations. 
+# Include files with callbacks that are called after every time step.
 
-include("update_velocity.jl")
+# "splitting" method: first-order Godunov operator splitting
+include("godunov_splitting.jl")
+# "coupled" method: algebraic velocity for step size control, analysis and output
+include("algebraic_velocity.jl")
 end # @muladd

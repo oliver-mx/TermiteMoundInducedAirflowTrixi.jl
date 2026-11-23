@@ -8,5 +8,11 @@
 ####################################################################################################
 # Include files with actual implementations for different systems of equations. 
 
+# model data passed to the equations: cross section, height profile, boundary temperature
+include("model_data.jl")
+# Termite mound equations (TME) in 1D: equations, parameters, initial condition, source terms,
+# numerical fluxes
 include("termite_mound_1d.jl")
+# manufactured solution of the forced TME: exact fields, source terms of all equations
+include("manufactured_solution.jl")
 end # @muladd

@@ -21,7 +21,10 @@ coverage_report/
 /test/Manifest*.toml
 /docs/Manifest*.toml
 /docs/build/
-!/docs/src/density.gif
+!/docs/src/evolution.gif
 !/docs/src/final.png
 !/docs/src/initial.png
-!/docs/src/velocity.gif
+!/docs/src/sol_coupled.gif
+!/docs/src/sol_splitting.gif
+!/docs/src/err_coupled.png
+!/docs/src/err_splitting.png

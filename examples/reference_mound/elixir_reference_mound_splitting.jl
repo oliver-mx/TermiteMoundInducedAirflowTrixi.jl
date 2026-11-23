@@ -1,27 +1,18 @@
 using TermiteMoundInducedAirflowTrixi
-using Trixi,
-    Trixi2Vtk, OrdinaryDiffEqLowStorageRK, Interpolations, FastGaussQuadrature, Plots
-using Trixi: AbstractEquations, @muladd
-import Interpolations: Line
-import Trixi:
-    flux_ranocha,
-    flux_hllc,
-    ln_mean,
-    inv_ln_mean,
-    flux,
-    varnames,
-    cons2prim,
-    prim2cons,
-    cons2entropy,
-    cons2cons,
-    max_abs_speeds,
-    max_abs_speed_naive
+using Trixi, OrdinaryDiffEqLowStorageRK, Plots
 
 ###############################################################################
 # Semidiscretization
+#
+# Full 24h simulation of the reference termite mound using the "splitting" method.
 
 (γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI) =
-    termite_parameters(1.5, 2.5)
+    termite_parameters(0.6, 2.0)
+
+cross_section = CrossSectionConstant()
+height_profile = HeightProfileTermiteMound(; xa, xb, L, h)
+boundary_temperature = BoundaryTemperatureTermiteMound(; xa, xb, xc, tᵣ, T_ref)
+
 equations = TermiteMoundEquations1D(;
     γ,
     k_i,
@@ -43,6 +34,9 @@ equations = TermiteMoundEquations1D(;
     T0,
     v0,
     Ti_LI,
+    cross_section,
+    height_profile,
+    boundary_temperature,
 )
 
 initial_condition = TermiteMoundInitialCondition
@@ -79,11 +73,11 @@ tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ
 ode = semidiscretize(semi, tspan)
 
 summary_callback = SummaryCallback()
-stepsize_callback = StepsizeCallback(cfl = 0.4)
-update_velocity_callback =
-    UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false))
+stepsize_callback = StepsizeCallback(cfl = 3.0)
+godunov_splitting_callback =
+    GodunovSplittingCallback(CarpenterKennedy2N54(williamson_condition = false))
 
-callbacks = CallbackSet(summary_callback, stepsize_callback, update_velocity_callback)
+callbacks = CallbackSet(summary_callback, stepsize_callback, godunov_splitting_callback)
 
 ###############################################################################
 # run the simulation
@@ -100,22 +94,27 @@ sol = solve(
 ###############################################################################
 # create plots
 
-ppd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi)
+pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi)
 plot(pd_init);
-savefig("initial.png");
+savefig("initial_splitting.png");
 
-anim_rho = @animate for i ∈ 1:length(sol.t)
-    pd_rho = PlotData1D(sol.u[i], semi)
-    plot(pd_rho["rho"]);
+# density and velocity together, time in hours
+anim = @animate for i ∈ 1:length(sol.t)
+    pd_i = PlotData1D(sol.u[i], semi)
+    plot(
+        plot(pd_i["rho"]),
+        plot(pd_i["v1"]),
+        layout = (1, 2),
+        size = (1400, 500),
+        plot_title = string(
+            "t = ",
+            round(sol.t[i] * equations.tᵣ / 3600, digits = 1),
+            " h",
+        ),
+    );
 end
-gif(anim_rho, "density.gif", fps = 5);
-
-anim_v = @animate for i ∈ 1:length(sol.t)
-    pd_v = PlotData1D(sol.u[i], semi)
-    plot(pd_v["v1"]);
-end
-gif(anim_v, "velocity.gif", fps = 5);
+gif(anim, "evolution_splitting.gif", fps = 5);
 
 pd = PlotData1D(sol);
 plot(pd);
-savefig("final.png");
+savefig("final_splitting.png");

@@ -1,275 +1,194 @@
-# Tutorial for the 1D Model
+# Tutorial
 
-In this section, we describe how to use **TermiteMoundInducedAirflowTrixi.jl** with **Trixi.jl**. This tutorial will guide you through setting up and running a 1D airflow simulation, including mesh creation, boundary conditions, numerical fluxes, and visualization of results.
+In this section, we describe how to use **TermiteMoundInducedAirflowTrixi.jl** with
+**Trixi.jl**. At the end of this guide, you will find the
+[complete code](#Complete-code) to copy and run.
 
-## Packages 
+## Step 0: Install and load the packages
 
-Before starting, ensure that the required packages are loaded:
+You need [Julia](https://julialang.org/downloads/) (version 1.10 or newer). Install the
+packages once in the Julia REPL:
 ```julia
 using Pkg
-
-Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "Trixi2Vtk",
-    "OrdinaryDiffEqLowStorageRK", "Interpolations", "FastGaussQuadrature", "Plots"])
-
-using TermiteMoundInducedAirflowTrixi,
-    Trixi,
-    Trixi2Vtk,
-    OrdinaryDiffEqLowStorageRK,
-    Interpolations,
-    FastGaussQuadrature,
-    Plots
+Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "OrdinaryDiffEqLowStorageRK", "Plots"])
+using TermiteMoundInducedAirflowTrixi
+using Trixi
+using OrdinaryDiffEqLowStorageRK
+using Plots
 ```
 
-## Import Functions
+## Step 1: Model parameters
 
-Next, we load some functions from different packages:
+The function `termite_parameters(r, h)` computes all required model parameters for a mound
+with radius `r` and height `h` (both in meters):
 ```julia
-using Trixi: AbstractEquations, @muladd
-import Interpolations: Line
-import Trixi:
-    flux_ranocha,
-    flux_hllc,
-    ln_mean,
-    inv_ln_mean,
-    flux,
-    varnames,
-    cons2prim,
-    prim2cons,
-    cons2entropy,
-    cons2cons,
-    max_abs_speeds,
-    max_abs_speed_naive
-```
-
-## Equations
-
-The first step is to define the model parameters. The function `termite_parameters(r,h)` generates all required parameters given a radius and a height:
-
-```julia
-radius = 0.6;
-height = 2.0;
 (γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI) =
-    termite_parameters(radius, height);
-equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h,
-    L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI);
+    termite_parameters(0.6, 2.0)
 ```
 
-## Initial state and flux functions
+## Step 2: Model data
 
-Next, we prescribe the initial state, volume flux and surface flux functions in our equation system:
+Next, we set the cross section, height profile and boundary temperature functions for the simulation:
 ```julia
-initial_condition = TermiteMoundInitialCondition;
-volume_flux = flux_ranocha;
-surface_flux = flux_hllc;
+cross_section = CrossSectionConstant()
+height_profile = HeightProfileTermiteMound(; xa, xb, L, h)
+boundary_temperature = BoundaryTemperatureTermiteMound(; xa, xb, xc, tᵣ, T_ref)
 ```
 
-## Semidiscretization
+## Step 3: Equations
 
-The polynomial degree for the `DGSEM` can be specified now:
+The parameters and functions are used to create the equations object:
 ```julia
-dg = DGSEM(
-    polydeg = 4,
-    surface_flux = surface_flux,
-    volume_integral = VolumeIntegralFluxDifferencing(volume_flux),
-);
+equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀,
+                                    T_ref, t_ref, T0, v0, Ti_LI,
+                                    cross_section, height_profile, boundary_temperature)
 ```
 
-We define a one-dimensional Tree mesh, which discretizes the (scaled) spatial domain:
+## Step 4: Initial condition
+
+Our simulation starts with constant initial states of the flow quantities:
 ```julia
-mesh = TreeMesh(
-    (0.0,),
-    (1.0,),
-    initial_refinement_level = 5,
-    n_cells_max = 1000,
-    periodicity = true,
-);
+initial_condition = TermiteMoundInitialCondition
 ```
+
+## Step 5: Spatial discretization (DG solver)
+
+The equations are solved with the discontinuous Galerkin spectral element method (DGSEM):
+```julia
+volume_flux = flux_ranocha
+surface_flux = flux_hllc
+dg = DGSEM(polydeg = 4, surface_flux = surface_flux,
+           volume_integral = VolumeIntegralFluxDifferencing(volume_flux))
+```
+
+## Step 6: Mesh
+
+We define a one-dimensional tree mesh:
+```julia
+mesh = TreeMesh((0.0,), (1.0,), initial_refinement_level = 5, n_cells_max = 1000,
+                periodicity = true)
+```
+
+## Step 7: Semidiscretization (coupled method)
 
 The semidiscretization is now defined:
 ```julia
-semi = SemidiscretizationHyperbolic(
-    mesh,
-    equations,
-    initial_condition,
-    dg,
-    source_terms = source_terms,
-    boundary_conditions = boundary_condition_periodic,
-);
+semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, dg,
+                                    source_terms = CoupledSourceTerms(source_terms),
+                                    boundary_conditions = boundary_condition_periodic)
 ```
 
-## Solvers and callbacks
+!!! note 
+    Always use the coupled implementation to solve the termite mound equations.
 
-We want to simulate a full day. In this case we set the time span to:
+## Step 8: Time span
+
+We want to simulate a full day. In this case, we set the time span to:
 ```julia
-tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ;
-ode = semidiscretize(semi, tspan);
+tspan = (0.0, 86400 / equations.tᵣ)
+ode = semidiscretize(semi, tspan)
 ```
 
-For time integrations we will always use the `CarpenterKennedy2N54` algorithim.
-Therefore, the `UpdateVelocityCallback` is defined as:
+## Step 9: Callbacks
+
+We add the following callbacks to our callback set:
 ```julia
-update_velocity_callback =
-    UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false));
+summary_callback = SummaryCallback()
+algebraic_velocity_callback = AlgebraicVelocityCallback()
+stepsize_callback = StepsizeCallback(cfl = 3.0)
+callbacks = CallbackSet(summary_callback, algebraic_velocity_callback, stepsize_callback)
 ```
 
-We add a `Summary` and a `Stepsize` to complete our callback set:
+!!! note 
+    `algebraic_velocity_callback` must be listed **before** `stepsize_callback` inside the callback set!
+
+## Step 10: Run the simulation
+
+Finally, we can solve the system of equations. The solution is saved at multiple points in time:
 ```julia
-summary_callback = SummaryCallback();
-stepsize_callback = StepsizeCallback(cfl = 0.5);
-callbacks = CallbackSet(
-    summary_callback,
-    stepsize_callback,
-    update_velocity_callback
-);
+sol = solve(ode, CarpenterKennedy2N54(williamson_condition = false);
+            dt = 1.0, ode_default_options()...,
+            saveat = 1800 / equations.tᵣ, callback = callbacks)
 ```
 
-## Run the simulation
+## Step 11: Plot the results
 
-Finally, we can solve the system of equations.
-The solution is saved across multiple points in time.
- ```julia
-sol = solve(
-    ode,
-    CarpenterKennedy2N54(williamson_condition = false);
-    dt = 1.0,
-    ode_default_options()...,
-    saveat = (tspan[end]-tspan[1])/24/2,
-    callback = callbacks,
-);
-```
-
-## Solution plots
-
-Our simulation starts with a constant initial state of `rho` and `v1`.
-The leading order pressure `p0` is always constant in `x`.
-We can plot the initial state of our flow quanities using:
- ```julia
-pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi)
+We can plot the **initial state** of our flow quantities using:
+```julia
+pd_init = PlotData1D(sol.u[1], semi)
 plot(pd_init)
+savefig("initial.png")
 ```
-![Initial](./initial.png)
+![Initial state](initial.png)
 
-
-The time evolution of the density can be visualized using:
- ```julia
-anim_rho = @animate for i ∈ 1:length(sol.t)
-    pd_rho = PlotData1D(sol.u[i], semi)
-    plot(pd_rho["rho"])
+The time evolution of the density and velocity can be visualized with:
+```julia
+anim = @animate for i in eachindex(sol.t)
+    pd = PlotData1D(sol.u[i], semi)
+    hours = round(sol.t[i] * equations.tᵣ / 3600, digits = 1)
+    plot(plot(pd["rho"]), plot(pd["v1"]), layout = (1, 2), size = (1200, 450),
+         plot_title = "t = $hours h")
 end
-gif(anim_rho, "rho.gif", fps = 5)
+gif(anim, "evolution.gif", fps = 5)
 ```
-![Density](./density.gif)
+![Evolution of density and velocity](evolution.gif)
 
-
-Similarly, the velocity can be plotted:
- ```julia
-anim_v = @animate for i ∈ 1:length(sol.t)
-    pd_v = PlotData1D(sol.u[i], semi)
-    plot(pd_v["v1"])
-end
-gif(anim_v, "v.gif", fps = 5)
+The **final state** after 24 hours:
+```julia
+pd_final = PlotData1D(sol)
+plot(pd_final)
+savefig("final.png")
 ```
-![Velocity](./velocity.gif)
+![Final state](final.png)
 
-
-The final state of the system variables can be visualized via:
- ```julia
-pd = PlotData1D(sol)
-plot(pd)
-```
-![Final](./final.png)
-
-## Plain code
+## Complete code
 
 ```julia
 using Pkg
-Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "Trixi2Vtk",
-    "OrdinaryDiffEqLowStorageRK", "Interpolations", "FastGaussQuadrature", "Plots"])
-using TermiteMoundInducedAirflowTrixi,
-    Trixi,
-    Trixi2Vtk,
-    OrdinaryDiffEqLowStorageRK,
-    Interpolations,
-    FastGaussQuadrature,
-    Plots
-using Trixi: AbstractEquations, @muladd
-import Interpolations: Line
-import Trixi:
-    flux_ranocha,
-    flux_hllc,
-    ln_mean,
-    inv_ln_mean,
-    flux,
-    varnames,
-    cons2prim,
-    prim2cons,
-    cons2entropy,
-    cons2cons,
-    max_abs_speeds,
-    max_abs_speed_naive
-radius = 0.6;
-height = 2.0;
+Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "OrdinaryDiffEqLowStorageRK", "Plots"])
+using TermiteMoundInducedAirflowTrixi
+using Trixi
+using OrdinaryDiffEqLowStorageRK
+using Plots
 (γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI) =
-    termite_parameters(radius, height);
-equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h,
-    L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI);
+    termite_parameters(0.6, 2.0);
+cross_section = CrossSectionConstant();
+height_profile = HeightProfileTermiteMound(; xa, xb, L, h);
+boundary_temperature = BoundaryTemperatureTermiteMound(; xa, xb, xc, tᵣ, T_ref);
+equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀,
+                                    T_ref, t_ref, T0, v0, Ti_LI,
+                                    cross_section, height_profile, boundary_temperature);
 initial_condition = TermiteMoundInitialCondition;
 volume_flux = flux_ranocha;
 surface_flux = flux_hllc;
-dg = DGSEM(
-    polydeg = 4,
-    surface_flux = surface_flux,
-    volume_integral = VolumeIntegralFluxDifferencing(volume_flux),
-);
-mesh = TreeMesh(
-    (0.0,),
-    (1.0,),
-    initial_refinement_level = 5,
-    n_cells_max = 1000,
-    periodicity = true,
-);
-semi = SemidiscretizationHyperbolic(
-    mesh,
-    equations,
-    initial_condition,
-    dg,
-    source_terms = source_terms,
-    boundary_conditions = boundary_condition_periodic,
-);
-tspan = (0.0, 1.0) .* 86400 ./ equations.tᵣ;
+dg = DGSEM(polydeg = 4, surface_flux = surface_flux,
+           volume_integral = VolumeIntegralFluxDifferencing(volume_flux));
+mesh = TreeMesh((0.0,), (1.0,), initial_refinement_level = 5, n_cells_max = 1000,
+                periodicity = true);
+semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, dg,
+                                    source_terms = CoupledSourceTerms(source_terms),
+                                    boundary_conditions = boundary_condition_periodic);
+tspan = (0.0, 86400 / equations.tᵣ);
 ode = semidiscretize(semi, tspan);
-update_velocity_callback =
-    UpdateVelocityCallback(CarpenterKennedy2N54(williamson_condition = false));
 summary_callback = SummaryCallback();
-stepsize_callback = StepsizeCallback(cfl = 0.5);
-callbacks = CallbackSet(
-    summary_callback,
-    stepsize_callback,
-    update_velocity_callback
-);
-sol = solve(
-    ode,
-    CarpenterKennedy2N54(williamson_condition = false);
-    dt = 1.0,
-    ode_default_options()...,
-    saveat = (tspan[end]-tspan[1])/24/2,
-    callback = callbacks,
-);
-pd_init = PlotData1D((x, equations) -> initial_condition(x, last(tspan), equations), semi)
-plot(pd_init); 
+algebraic_velocity_callback = AlgebraicVelocityCallback();
+stepsize_callback = StepsizeCallback(cfl = 3.0);
+callbacks = CallbackSet(summary_callback, algebraic_velocity_callback, stepsize_callback);
+sol = solve(ode, CarpenterKennedy2N54(williamson_condition = false);
+            dt = 1.0, ode_default_options()...,
+            saveat = 1800 / equations.tᵣ, callback = callbacks);
+pd_init = PlotData1D(sol.u[1], semi);
+plot(pd_init);
 savefig("initial.png");
-anim_rho = @animate for i ∈ 1:length(sol.t)
-    pd_rho = PlotData1D(sol.u[i], semi)
-    plot(pd_rho["rho"]);
-end
-gif(anim_rho, "rho.gif", fps = 5);
-anim_v = @animate for i ∈ 1:length(sol.t)
-    pd_v = PlotData1D(sol.u[i], semi)
-    plot(pd_v["v1"]);
-end
-gif(anim_v, "v.gif", fps = 5);
-pd = PlotData1D(sol);
-plot(pd); 
+anim = @animate for i in eachindex(sol.t)
+    pd = PlotData1D(sol.u[i], semi)
+    hours = round(sol.t[i] * equations.tᵣ / 3600, digits = 1)
+    plot(plot(pd["rho"]), plot(pd["v1"]), layout = (1, 2), size = (1200, 450),
+         plot_title = "t = $hours h")
+end;
+gif(anim, "evolution.gif", fps = 5);
+pd_final = PlotData1D(sol);
+plot(pd_final);
 savefig("final.png");
 
 ```

@@ -5,30 +5,72 @@
 [![Build Status](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml/badge.svg?)](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/graph/badge.svg?token=w06WNAQpNI)](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22708420)](https://doi.org/10.5281/zenodo.22708420)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22708420.svg)](https://doi.org/10.5281/zenodo.22708420)
 
 Documentation for [TermiteMoundInducedAirflowTrixi.jl](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl).
 
-**TermiteMoundInducedAirflowTrixi.jl** is a numerical simulation package focused on solving a thermo fluid dynamic model describing airflow inside of a termite mound with the discontinuous Galerkin method written in Julia. The package builds on the numerical simulation framework for conservation laws [Trixi.jl](https://github.com/trixi-framework/Trixi.jl). It provides a specialized model to simulate airflow inside termite mounds.
+**TermiteMoundInducedAirflowTrixi.jl** is a numerical simulation package written in Julia. It solves a thermo-fluid-dynamic model of the airflow inside a termite mound with the discontinuous Galerkin method. The package builds on the numerical simulation framework for conservation laws [Trixi.jl](https://github.com/trixi-framework/Trixi.jl). It provides a specialized model to simulate airflow inside termite mounds.
 
-## Description
+## The termite mound model (TME)
 
-This package provides:
-
-- **1D Termite Mound Model**: This thermo fluid dynamic model describes the airflow dynamics inside of termite mounds. The one-dimensional mathematicalmodel originates from the Euler equations of gas dynamics in a low Mach number regime. 
+The **1D termite mound model** (termite mound equations, TME) is a thermo-fluid-dynamic model of
+the airflow through the flow channel of a termite mound. The channel is a closed loop: it runs
+from the soil up through the flute to the top of the mound, down through the chimney and back
+through the soil. It is parametrized by the scaled arc length ``x \in [0, 1]`` with periodic
+boundary conditions. The model is a low Mach number limit of the Euler equations of gas
+dynamics (see [Mathematics](@ref)). All quantities are scaled.
 
 ```math
-	\begin{aligned}
-		\frac{\partial \rho}{\partial t} + \frac{\partial \left( \rho u\right)}{\partial x} &= - \frac{\textrm{A}_x}{\textrm{A}}\rho u \\
-	    \frac{\partial v}{\partial t} &= \frac{1}{\int_0^1 \frac{\rho}{A} \, dy} \left[ \int_0^1 -\rho u u_x  - \rho u \left( \beta \eta - \beta\left(1-\eta\right) \vert u \vert \right) - \frac{\textrm{h}_x}{Fr^2}(\rho - \rho_{h_0}) \, dy \right] \\
-        \frac{\partial p_0}{\partial t} + \gamma p_0 \frac{\partial u}{\partial x} &= - \gamma \frac{\textrm{A}_x}{\textrm{A}} u p_0 - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right) \\
-        \frac{\partial T_i}{\partial t} &= k_i \left( T - T_i \right) \\
-        p_0 &= \rho T \\
-        u(t,x) &= \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A(y)\left[ -\frac{\partial  p_0}{\partial t} - \frac{k_w}{\textrm{A} \sqrt{\textrm{A}}} \left(T - \textrm{T}_\textrm{u} \right)\right] \, dy.
-    \end{aligned}
+\begin{aligned}
+\frac{\partial \rho}{\partial t} + \frac{\partial (\rho u)}{\partial x}
+  &= -\frac{A_x}{A} \rho u, \\
+\frac{\partial T_i}{\partial t} &= k_i (T - T_i), \\
+\frac{\partial p_0}{\partial t} + \gamma p_0 \frac{\partial u}{\partial x}
+  &= -\gamma \frac{A_x}{A} u p_0 - \frac{k_w}{\sqrt{A}} (T - T_u), \\
+\frac{\mathrm{d} v}{\mathrm{d} t}
+  &= \frac{1}{\int_0^1 \frac{\rho}{A} \, dy} \int_0^1 \Big[ -\rho u u_x
+     - \frac{\beta}{A} \rho u \big(\eta + (1-\eta)|u|\big) \\
+  &\hphantom{= \frac{1}{\int_0^1 \frac{\rho}{A} \, dy} \int_0^1 \Big[}
+     - \frac{h_x}{Fr^2} (\rho - \rho_{h_0}) \Big] \, dy, \\
+p_0 &= \rho T, \\
+u(t, x) &= \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x \frac{A(y)}{\gamma p_0}
+  \left[ -\frac{\mathrm{d} p_0}{\mathrm{d} t} - \frac{k_w}{\sqrt{A}} (T - T_u) \right] dy.
+\end{aligned}
 ```
 
-The model is designed to be used with **[Trixi.jl](https://github.com/trixi-framework/Trixi.jl)**, a flexible and high-performance framework for solving systems of conservation laws using the Discontinuous Galerkin (DG) method.
+**Unknowns:**
+- air density ``\rho(t, x)`` and air velocity ``u(t, x)``,
+- leading-order pressure ``p_0(t)`` (constant in space) and air temperature ``T = p_0/\rho``,
+- mound material temperature ``T_i(t, x)``,
+- auxiliary velocity ``v(t) = A(0) \, u(t, 0)``, the volume flux at ``x = 0``.
+
+**Model data:**
+- cross section ``A(x)`` of the flow channel,
+- height profile ``h(x)`` of the flow channel (its slope ``h_x`` drives the buoyancy),
+- boundary (wall) temperature ``T_u(t, x, T_i)``: the soil temperature in the soil, the mean
+  of the ambient air temperature and ``T_i`` in the flute, and ``T_i`` in the chimney.
+
+The last equation is the **velocity constraint**. Since ``p_0`` does not depend on ``x``, the
+``p_0`` equation does not evolve a field; it determines the velocity ``u``. The model is
+therefore a system of a transport PDE for ``\rho``, ODEs for ``v`` and ``p_0``, an ODE for
+``T_i`` at every point ``x`` (``T_i`` is not transported) and an algebraic equation for ``u``.
+
+## What the package provides
+
+- **The equations** `TermiteMoundEquations1D` for [Trixi.jl](https://github.com/trixi-framework/Trixi.jl),
+  a high-performance framework for conservation laws with the discontinuous Galerkin (DG)
+  method, together with the model parameters (`termite_parameters`) and the model data
+  (cross section, height profile and boundary temperature) of termite mounds.
+- **Two numerical methods** for the PDE-ODE system with algebraic constraint:
+  - a **coupled approach** (`CoupledSourceTerms` + `AlgebraicVelocityCallback`): all
+    equations are integrated together. **This is the recommended approach.**
+  - a **Godunov-type splitting** (`GodunovSplittingCallback`): a first-order operator
+    splitting.
+- **A manufactured solution** to verify both methods (see [Manufactured solution](@ref)).
+- **Example elixirs** in `examples/` for a termite mound, a reference mound and the
+  manufactured solution, each for both methods.
+
+To get started, follow the [Tutorial](@ref).
 
 ## Installation
 
@@ -37,11 +79,13 @@ operating system](https://julialang.org/downloads/platform/).
 TermiteMoundInducedAirflowTrixi.jl works with Julia v1.10 and newer.
 We recommend using the latest stable release of Julia.
 
-**TermiteMoundInducedAirflowTrixi.jl** and **Trixi.jl** can be added and installed by executing the following commands in the Julia REPL:
+To run the examples, **TermiteMoundInducedAirflowTrixi.jl**, **Trixi.jl**
+(DG solver framework), **OrdinaryDiffEqLowStorageRK.jl** (time integration) and **Plots.jl**
+(visualization) can be added and installed by executing the following commands in the Julia REPL:
 ```julia
 julia> using Pkg
 
-julia> Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi"])
+julia> Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "OrdinaryDiffEqLowStorageRK", "Plots"])
 ```
 You can copy and paste all commands to the REPL *including* the leading
 `julia>` prompts - they will automatically be stripped away by Julia.
@@ -57,7 +101,7 @@ You can directly refer to TermiteMoundInducedAirflowTrixi.jl as
   year={2026},
   howpublished={\url{https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl}},
   license = {MIT},
-  doi = {https://doi.org/10.5281/zenodo.22708420}
+  doi = {10.5281/zenodo.22708420}
 }
 ```
 
@@ -65,7 +109,7 @@ When using this package, please make sure to cite **[Trixi.jl](https://github.co
 
 ## Authors
 
-TermiteMoundInducedAirflowTrixi.jl is maintained by [Oliver P. Marx](https://github.com/oliver-mx)
+TermiteMoundInducedAirflowTrixi.jl is maintained by [Oliver P. Marx](https://github.com/oliver-mx).
 
 ## License
 

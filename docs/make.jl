@@ -21,6 +21,7 @@ makedocs(;
         "Home" => "index.md",
         "Tutorial" => "tuto.md",
         "Mathematics" => "math.md",
+        "Manufactured solution" => "manufactured.md",
         "Authors" => "auth.md",
         "License" => "lice.md",
         "References" => "reference.md",
