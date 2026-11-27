@@ -11,7 +11,7 @@
 Exact fields and derivatives of the manufactured solution of the TME at the point `x`
 (a scalar) and time `t`, in scaled variables.
 
-### Forced problem
+# Forced problem
 On the periodic domain ``x \in [0, 1]``, the manufactured solution solves the TME with
 additional forcing terms ``s_\rho, s_T, s_p, s_v``:
 ```math
@@ -28,24 +28,24 @@ T &= \frac{p_0}{\rho}, \qquad A(0) \, u(t, 0) = v(t).
 \end{aligned}
 ```
 The ``p_0`` equation holds pointwise. Since ``p_0`` does not depend on ``x``, it is
-equivalent to the velocity constraint ``A u = v + \int_0^x A (Q - c) \, dy`` (with ``s_p``
-included in ``Q``) together with the ODE ``p_0' = \gamma p_0 c``. The sources are given in
+equivalent to the velocity constraint ``A u = v + \int_0^x A (Q - c) \, dy`` (with the
+additional term ``s_p / (\gamma p_0)`` in ``Q``) together with the ODE ``p_0' = \gamma p_0 c``. The sources are given in
 [`manufactured_source_terms`](@ref) (``s_\rho, s_T``) and
 [`manufactured_source_terms_ode`](@ref) (``s_p, s_v``).
 
-### Data
+# Data
 The model data of `equations` are used unchanged, so the manufactured solution works with any
 cross section, height profile and boundary temperature:
-- cross section ``A(x)``, ``A_x(x)`` (`equations.cross_section`, see [`A`](@ref)); the examples
-  use [`CrossSectionSine`](@ref)`(0.3)`, i.e. ``A(x) = 1 + 0.3 \sin(2\pi x + \pi/2)``, so that
-  all ``A`` and ``A_x`` terms are active,
+- cross section ``A(x)``, ``A_x(x)`` (`equations.cross_section`, see [`A`](@ref)), where
+  the examples use [`CrossSectionSine`](@ref)`(0.3)`, i.e.
+  ``A(x) = 1 + 0.3 \sin(2\pi x + \pi/2)``, so that all ``A`` and ``A_x`` terms are active,
 - the slope ``h_x`` (`equations.height_profile`, see [`h_x`](@ref)) and the heat transfer
   factor ``I_w`` ([`I_w`](@ref)),
 - the boundary temperature ``T_u(t, x, T_i)`` (`equations.boundary_temperature`, see
-  [`T_u`](@ref)), scaled by `t_ref`.
+  [`T_u`](@ref)).
 For the manufactured solution, ``A`` must be ``1``-periodic and positive.
 
-### Manufactured fields
+# Manufactured fields
 With ``\omega = 2\pi/10`` (one period on ``t \in [0, 10]``) and ``k = 2\pi``:
 ```math
 \begin{aligned}
@@ -63,7 +63,7 @@ the physical initial state: ``\rho_0 = 1/T_0`` and ``T_{i,0} = T_0`` with the sc
 and ``v_0`` the scaled `v0`.
 
 These choices have the following properties:
-- all fields are smooth and ``1``-periodic in ``x``; ``p_0`` only depends on ``t``,
+- all fields are smooth and ``1``-periodic in ``x``, and ``p_0`` only depends on ``t``,
 - ``A u = v + w`` is periodic and ``w(t, 0) = 0``, so ``A(0) u(t, 0) = v(t)`` holds exactly,
 - ``u < 0`` everywhere (no sign change in ``|u|`` or in `flux_ranocha`),
 - ``u_x = (w_x - A_x u)/A`` follows from ``(A u)_x = w_x``.
@@ -76,7 +76,7 @@ These choices have the following properties:
     part of each period (top-heavy density stratification), and the error grows to ``O(1)``
     independently of the mesh size and the time step.
 
-### Returns
+# Returns
 A `NamedTuple` with the fields and the derivatives needed for the source terms:
 `rho, rho_t, rho_x, p0, p0_t, v, v_t, u, u_x, Ti, Ti_t`, and `A_`, `A_x_` (``A`` and
 ``A_x`` at `x`).
@@ -128,7 +128,8 @@ end
     ManufacturedInitialCondition(x, t, equations::TermiteMoundEquations1D)
 
 Exact (manufactured) solution of the forced TME (see [`manufactured_fields`](@ref)) as the
-state vector `(rho, v1, p, Ti)` = ``(\rho, u, p_0, T_i)`` at the position `x` and time `t`.
+state vector `(rho, v1, p, Ti)` = ``(\rho, u, p_0, T_i)`` at the position `x` (vector with one
+entry) and time `t`.
 Used as the initial condition (``t = 0``) and as the reference solution for the errors.
 
 At ``t = 0`` the initial condition is
@@ -146,6 +147,9 @@ so that ``v(0) = A(0) \, u(0, 0) = v_0``. The constants are defined in
 Use it together with [`manufactured_source_terms`](@ref) (sources of ``\rho`` and ``T_i``) and
 [`manufactured_source_terms_ode`](@ref) (sources of ``p_0`` and ``v``), for the "splitting"
 ([`GodunovSplittingCallback`](@ref)) and the "coupled" ([`CoupledSourceTerms`](@ref)) methods.
+
+# Returns
+`SVector(rho, v1, p, Ti)`.
 """
 @inline function ManufacturedInitialCondition(x, t, equations::TermiteMoundEquations1D)
     m = manufactured_fields(x[1], t, equations)
@@ -157,10 +161,11 @@ end
 
 Source terms of the ``\rho`` and ``T_i`` equations of the forced TME (handled by Trixi, see
 [`manufactured_fields`](@ref)): the model source terms
-[`source_terms`](@ref), evaluated on the numerical state `u`, plus the manufactured sources
+[`source_terms`](@ref), evaluated on the numerical state `u` at the position `x` (vector with
+one entry), plus the manufactured sources
 ``s_\rho`` and ``s_T``, evaluated on the exact fields.
 
-The forced problem is (all four equations; the ``p_0`` and ``v`` sources are given by
+The forced problem reads as follows (the ``p_0`` and ``v`` sources are given by
 [`manufactured_source_terms_ode`](@ref)):
 ```math
 \begin{aligned}
@@ -182,7 +187,7 @@ s_T &= \hat T_{i,t} - k_i (\hat T - \hat T_i).
 \end{aligned}
 ```
 
-### Returns
+# Returns
 `source_terms(u, x, t, equations) + SVector(s_rho, 0, 0, s_Ti)`. The `v1` and `p` components
 stay zero: they are updated by the ODE part of the system ([`GodunovSplittingCallback`](@ref)
 or [`CoupledSourceTerms`](@ref)).
@@ -211,27 +216,27 @@ s_v &= \frac{\hat\rho}{A} \hat v' - \hat F_v, \qquad
            \left(\eta + (1-\eta)|\hat u|\right) - \frac{h_x}{Fr^2} (\hat\rho - \rho_{h_0}).
 \end{aligned}
 ```
-- ``s_p`` is added pointwise to the right-hand side of the ``p_0`` equation, and hence also to
-  ``Q`` in the velocity constraint. It must depend on ``x``: only then can the manufactured
+- ``s_p`` is added pointwise to the right-hand side of the ``p_0`` equation, and hence, as
+  ``s_p / (\gamma p_0)``, also to ``Q`` in the velocity constraint. It must depend on ``x``: only then can the manufactured
   velocity ``\hat u`` be chosen freely and smoothly. ``s_p`` is uniquely determined by the
   fields.
-- ``s_v`` is added to the integrand of the ``v`` equation. Only its integral matters; the
+- ``s_v`` is added to the integrand of the ``v`` equation. Only its integral matters. The
   pointwise choice above makes the discrete integrand equal to ``\hat\rho \hat v' / A`` at
   every node, so the ``v`` equation is reproduced without quadrature error.
 
-### Usage
+# Usage
 Pass it as `source_terms` to [`GodunovSplittingCallback`](@ref) ("splitting") or as
 `ode_source_terms` to [`CoupledSourceTerms`](@ref) ("coupled").
 
-### Returns
+# Returns
 `SVector(s_p, s_v)`.
 """
 @inline function manufactured_source_terms_ode(x, t, equations::TermiteMoundEquations1D)
-    @unpack γ, k_w, β, η, ρₕ₀, Fr², t_ref = equations
+    @unpack γ, k_w, β, η, ρₕ₀, Fr² = equations
     m = manufactured_fields(x, t, equations)
     @unpack rho, p0, u, u_x, A_, A_x_ = m
     T = p0 / rho
-    Tu = T_u(t, x, m.Ti, equations) * t_ref
+    Tu = T_u(t, x, m.Ti, equations)
     # p0 equation: s_p = p0_t - f, f = right-hand side as in `p0_rhs`
     f_p =
         - γ * p0 * u_x - γ * A_x_ / A_ * u * p0 -

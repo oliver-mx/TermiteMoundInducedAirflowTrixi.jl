@@ -18,7 +18,7 @@
 @doc raw"""
     CrossSectionConstant()
 
-Constant cross section ``A \equiv 1``, ``A_x \equiv 0`` (the default of the termite mound
+Constant cross section ``A \equiv 1``, ``A_x \equiv 0`` (used in the termite mound
 simulations). Pass it as `cross_section` to [`TermiteMoundEquations1D`](@ref).
 
 See also [`CrossSectionSine`](@ref) and [`CrossSection`](@ref).
@@ -35,8 +35,8 @@ Cross section
 ```math
 A(x) = 1 + a \sin(2\pi x + \pi/2), \qquad A_x(x) = 2\pi a \cos(2\pi x + \pi/2),
 ```
-with ``a`` = `amplitude`. ``A`` is ``1``-periodic and largest at ``x = 0``; ``|a| < 1`` is
-required for ``A > 0``. For ``a = 0``, it returns exactly ``A = 1`` and ``A_x = 0``.
+with ``a`` = `amplitude`. ``A`` is ``1``-periodic and largest at ``x = 0``. The condition
+``|a| < 1`` is required for ``A > 0``. For ``a = 0``, it returns exactly ``A = 1`` and ``A_x = 0``.
 Pass it as `cross_section` to [`TermiteMoundEquations1D`](@ref).
 """
 struct CrossSectionSine{RealT<:Real}
@@ -71,7 +71,7 @@ cross_section = CrossSection(x -> 1 + 0.2 * cos(2pi * x), x -> -0.4pi * sin(2pi 
 Requirements (not checked):
 - ``A > 0`` on ``[0, 1]``,
 - ``A`` and ``A_x`` are ``1``-periodic (the domain is periodic) and smooth,
-- `A_x` is the exact derivative of `A`.
+- ``A_x`` is the exact derivative of ``A``.
 """
 struct CrossSection{AFunction,AxFunction}
     A::AFunction
@@ -91,9 +91,9 @@ Slope ``h_x`` of the height profile of the flow channel of a termite mound (scal
 piecewise constant:
 ```math
 h_x(x) = \begin{cases}
-  \dfrac{0.3}{x_a L} & x < x_a \quad \text{(soil, rising)}, \\[1ex]
-  \dfrac{h}{(x_b - x_a) L} & x_a \le x < x_b \quad \text{(flute, rising to the top)}, \\[1ex]
-  -1 & x \ge x_b \quad \text{(chimney and soil, descending)}.
+  \dfrac{0.3}{x_a L} & x \le x_a \quad \text{(soil, rising)}, \\[1ex]
+  \dfrac{h}{(x_b - x_a) L} & x_a < x \le x_b \quad \text{(flute, rising to the top)}, \\[1ex]
+  -1 & x > x_b \quad \text{(chimney and soil, descending)}.
 \end{cases}
 ```
 The arguments are the scaled transitions `xa`, `xb`, the channel length `L` (m) and the
@@ -113,9 +113,9 @@ end
 
 @inline function h_x(x, height_profile::HeightProfileTermiteMound)
     @unpack xa, xb, L, h = height_profile
-    dy = if x < xa
+    dy = if x ≤ xa
         0.3 / (xa * L)
-    elseif x < xb
+    elseif x ≤ xb
         h / (xb - xa) / L
     else
         -1.0
@@ -142,8 +142,8 @@ end
 ####################################################################################################
 # Boundary temperature
 #
-# Interface: `T_u(t, x, Ti, boundary_temperature)` returns the boundary temperature in K at the
-# scaled time `t`, position `x` and scaled mound temperature `Ti`. For efficiency, the solvers
+# Interface: `T_u(t, x, Ti, boundary_temperature)` returns the scaled boundary temperature at
+# the scaled time `t`, position `x` and scaled mound temperature `Ti`. For efficiency, the solvers
 # split the evaluation into a time-only part, computed once for all nodes,
 #   time_data = T_u_time(t, boundary_temperature)
 #   T_u_node(time_data, x, Ti, boundary_temperature)
@@ -155,23 +155,26 @@ end
 @doc raw"""
     BoundaryTemperatureTermiteMound(; xa, xb, xc, tᵣ, T_ref)
 
-Boundary (wall) temperature ``T_u`` of the flow channel of a termite mound, defined piecewise:
+Scaled boundary (wall) temperature ``T_u`` of the flow channel of a termite mound, defined
+piecewise:
 ```math
 T_u(t, x) = \begin{cases}
-  T_{soil}(t) & x \le x_a \text{ or } x \ge x_c \quad \text{(soil)}, \\
-  \frac{1}{2}\left(T_{air}(t) + T_i(t, x)\right) & x_a < x \le x_b \quad \text{(flute)}, \\
-  T_i(t, x) & x_b < x < x_c \quad \text{(chimney)}.
+  T_{soil}(t) / T_{ref} & x \le x_a \text{ or } x > x_c \quad \text{(soil)}, \\
+  \frac{1}{2}\left(T_{air}(t) / T_{ref} + T_i(t, x)\right) & x_a < x \le x_b
+    \quad \text{(flute)}, \\
+  T_i(t, x) & x_b < x \le x_c \quad \text{(chimney)}.
 \end{cases}
 ```
-It depends on the mound material temperature ``T_i``, the soil temperature ``T_{soil}`` (at
-30 cm depth, [`T_soil`](@ref)) and the ambient air temperature ``T_{air}`` ([`T_air`](@ref)),
-which are daily cycles. The arguments are the scaled transitions `xa`, `xb`, `xc`, the reference
+It depends on the scaled mound material temperature ``T_i``, the soil temperature
+``T_{soil}`` (at 30 cm depth, [`T_soil`](@ref)) and the ambient air temperature ``T_{air}``
+([`T_air`](@ref)). ``T_{soil}`` and ``T_{air}`` are daily cycles in K and are scaled by the
+reference temperature ``T_{ref}``. The arguments are the scaled transitions `xa`, `xb`, `xc`, the reference
 time `tᵣ` (s) and the reference temperature `T_ref` (K), as returned by
 [`termite_parameters`](@ref). Pass it as `boundary_temperature` to
 [`TermiteMoundEquations1D`](@ref).
 
-``T_{air}`` and ``T_{soil}`` only depend on time; the solvers compute them once per time point
-([`T_air_soil`](@ref)) instead of once per node.
+``T_{air}`` and ``T_{soil}`` only depend on time. Therefore, the solvers compute them once per
+time point ([`T_air_soil`](@ref)) instead of once per node.
 """
 struct BoundaryTemperatureTermiteMound{RealT<:Real}
     xa::RealT
@@ -214,10 +217,10 @@ end
     boundary_temperature::BoundaryTemperatureTermiteMound,
 )
     @unpack xa, xb, xc, T_ref = boundary_temperature
-    c0, c1 = T_air_soil
-    c2 = 0.5f0 * (c0 + Ti * T_ref)
-    c3 = Ti * T_ref
-    return ifelse((x ≤ xa) || (x ≥ xc), c1, ifelse(x ≤ xb, c2, c3))
+    T_air_, T_soil_ = T_air_soil
+    T_soil_scaled = T_soil_ / T_ref
+    T_flute = 0.5f0 * (T_air_ / T_ref + Ti)
+    return ifelse((x ≤ xa) || (x > xc), T_soil_scaled, ifelse(x ≤ xb, T_flute, Ti))
 end
 
 @inline function T_u(t, x, Ti, boundary_temperature::BoundaryTemperatureTermiteMound)
@@ -229,11 +232,11 @@ end
 
 User-defined boundary (wall) temperature from a function `T_u(t, x, Ti)` of the scaled time
 `t`, the scalar position `x` and the scaled mound material temperature `Ti` at `x`. It must
-return the temperature **in K** (it is scaled by `t_ref` ``= 1/T_{ref}`` in the solvers).
-Pass it as `boundary_temperature` to [`TermiteMoundEquations1D`](@ref), e.g. a constant wall
-temperature of 300 K:
+return the **scaled** temperature (temperature in K divided by the reference temperature
+`T_ref`). Pass it as `boundary_temperature` to [`TermiteMoundEquations1D`](@ref), e.g. a
+constant wall temperature of 300 K, with `T_ref` from [`termite_parameters`](@ref):
 ```julia
-boundary_temperature = BoundaryTemperature((t, x, Ti) -> 300.0)
+boundary_temperature = BoundaryTemperature((t, x, Ti) -> 300.0 / T_ref)
 ```
 """
 struct BoundaryTemperature{TuFunction}
@@ -249,7 +252,7 @@ end
 @doc raw"""
     Fourier(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var)
 
-Evaluates the truncated Fourier series with a period of 24 hours
+Evaluate the truncated Fourier series with a period of 24 hours
 ```math
 F(t) = a_0 + \sum_{i=1}^{5} \left[ a_{2i-1} \cos\left(\frac{i \pi t}{12}\right)
        + a_{2i} \sin\left(\frac{i \pi t}{12}\right) \right],
@@ -257,12 +260,9 @@ F(t) = a_0 + \sum_{i=1}^{5} \left[ a_{2i-1} \cos\left(\frac{i \pi t}{12}\right)
 with the time ``t`` in hours. Used for the daily cycles of [`T_air`](@ref) and
 [`T_soil`](@ref).
 
-### Parameters
+# Arguments
 - `a0`, …, `a10`: Fourier coefficients ``a_0, \dots, a_{10}``.
 - `t_var`: time of day in hours.
-
-### Returns
-The value ``F(t)``.
 """
 @inline function Fourier(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, t_var)
     return a0 +
@@ -288,11 +288,11 @@ Figure 2 of:
   Numerical analysis for ground temperature variation
   [DOI: 10.1186/s40517-017-0082-z](https://doi.org/10.1186/s40517-017-0082-z)
 
-### Parameters
+# Arguments
 - `t_var`: time of day in hours (see [`T_air_soil`](@ref) for the conversion from the scaled
   time).
 
-### Returns
+# Returns
 The air temperature in K.
 """
 @inline function T_air(t_var)
@@ -320,11 +320,11 @@ Soil temperature ``T_{soil}`` at 30 cm depth as a daily cycle, given by the Four
   Numerical analysis for ground temperature variation
   [DOI: 10.1186/s40517-017-0082-z](https://doi.org/10.1186/s40517-017-0082-z)
 
-### Parameters
+# Arguments
 - `t_var`: time of day in hours (see [`T_air_soil`](@ref) for the conversion from the scaled
   time).
 
-### Returns
+# Returns
 The soil temperature in K.
 """
 @inline function T_soil(t_var)

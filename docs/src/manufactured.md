@@ -18,7 +18,7 @@ methods against the constructed analytical solution.
 3. **Compare.** We solve the forced equations numerically and compare the result with the
    chosen fields. The error must decrease when the mesh and the time step are refined.
 
-Note that the manufactured solution does **not** solve the original termite mound model; instead, it is an analytical solution of the termite mound model **with additional forcing terms**. It tests the numerical method,
+Note that the manufactured solution does **not** solve the original termite mound model. Instead, it is an analytical solution of the termite mound model **with additional forcing terms**. It tests the numerical method,
 not the physics.
 
 ## Termite mound equations with additional forcing

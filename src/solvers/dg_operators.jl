@@ -9,14 +9,18 @@
     dg_operators(dg, cache)
 
 DG-consistent operators on a 1D `TreeMesh`, all acting on nodal fields stored as
-`(node, element)` matrices:
-- `W`: quadrature weights (LGL weights times the element Jacobian), `∫ f dx ≈ sum(W .* f)`,
+`(node, element)` matrices. Used by the "splitting" ([`GodunovSplittingCallback`](@ref)) and
+the "coupled" ([`CoupledSourceTerms`](@ref)) methods.
+
+# Returns
+A `NamedTuple` with the fields
+- `W`: quadrature weights (LGL weights times the element Jacobian), so that
+  ``\int f \, dx \approx`` `sum(W .* f)`,
 - `D`: reference derivative matrix and `inverse_jacobian` (physical derivative per element),
-- `S`: reference integration matrix, `S[i, j] = ∫_{-1}^{ξ_i} ℓ_j(s) ds`,
+- `S`: reference integration matrix with the entries
+  ``S_{ij} = \int_{-1}^{\xi_i} \ell_j(s) \, ds`` (see [`integration_matrix`](@ref)),
 - `order`: element indices sorted by position (left to right),
 - `volume`: length of the domain.
-Used by the "splitting" ([`GodunovSplittingCallback`](@ref)) and the "coupled"
-([`CoupledSourceTerms`](@ref)) methods.
 """
 function dg_operators(dg, cache)
     basis = dg.basis
@@ -38,8 +42,9 @@ end
 @doc raw"""
     integration_matrix(nodes)
 
-Returns `S` with `S[i, j] = ∫_{-1}^{ξ_i} ℓ_j(s) ds` for the Lagrange polynomials `ℓ_j` of the
-reference `nodes`, computed exactly with Gauss quadrature.
+Return the reference integration matrix `S` with the entries
+``S_{ij} = \int_{-1}^{\xi_i} \ell_j(s) \, ds`` for the Lagrange polynomials ``\ell_j`` of the
+reference `nodes` ``\xi_i``, computed exactly with Gauss quadrature.
 """
 function integration_matrix(nodes)
     n = length(nodes)
@@ -62,7 +67,7 @@ end
 @doc raw"""
     dg_derivative(f, ops)
 
-Elementwise polynomial derivative ``\partial_x f`` of a nodal field `f` (node, element).
+Elementwise polynomial derivative ``\partial_x f`` of a nodal field `f` (`(node, element)` matrix).
 """
 function dg_derivative(f, ops)
     df = similar(f)
@@ -75,7 +80,7 @@ end
 @doc raw"""
     dg_cumulative_integral(g, ops)
 
-Cumulative integral ``\int_{x_{min}}^x g \, dy`` of a nodal field `g` (node, element),
+Cumulative integral ``\int_{x_{min}}^x g \, dy`` of a nodal field `g` (`(node, element)` matrix),
 integrating the elementwise interpolation polynomial of `g` exactly. The result is zero at
 the left end of the domain.
 """

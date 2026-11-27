@@ -11,8 +11,8 @@ Callback of the "splitting" method: a first-order Godunov (Lie-Trotter) operator
 the TME. Every time step ``[t_{prev}, t_{now}]`` with ``\Delta t = t_{now} - t_{prev}``
 consists of two sub-steps:
 1. **PDE step** (Trixi): ``\rho`` (transport PDE) and ``T_i`` (ODE at every node, a source
-   term in Trixi) are advanced from ``t_{prev}`` to ``t_{now}`` with ``u`` and ``p_0`` frozen (the `v1` and `p` components of the Trixi right-hand side
-   are zero).
+   term in Trixi) are advanced from ``t_{prev}`` to ``t_{now}`` with ``u`` and ``p_0`` frozen
+   (the `v1` and `p` components of the Trixi right-hand side are zero).
 2. **ODE step** (this callback, called after every time step):
    - ``v`` is advanced by a predictor-corrector (Heun) step: explicit Euler predictor
      ``v^* = v_{prev} + \Delta t \, v'_{prev}``, then the trapezoidal rule
@@ -24,9 +24,10 @@ consists of two sub-steps:
      ```math
      u = \frac{v + I_0}{A}, \qquad I_0(x) = \int_{x_{min}}^x A \, (Q - c) \, dy,
      ```
-     with ``Q = -I_w k_w (T - T_u) / (\sqrt{A} \gamma p_0)`` (plus an optional source
-     ``s_p``) and ``c = \int A Q \, dx / \int A \, dx``, evaluated at the state at
-     ``t_{prev}``,
+     with ``Q = -I_w k_w (T - T_u) / (\sqrt{A} \gamma p_0)`` and
+     ``c = \int A Q \, dx / \int A \, dx``, evaluated at the state at ``t_{prev}``. Only for
+     the manufactured solution, the term ``s_p / (\gamma p_0)`` with the source ``s_p`` of
+     the ``p_0`` equation is added to ``Q``,
    - ``p_0`` is advanced by the trapezoidal rule with the rates [`p0_rhs`](@ref) at
      ``t_{prev}`` and at ``t_{now}`` (new ``\rho``, ``T_i``, ``u``),
    - ``u`` is written into the `v1` field and ``p_0`` into the `p` field at all nodes.
@@ -36,15 +37,15 @@ The auxiliary velocity ``v = A(x_{min}) \, v_1(x_{min})`` is stored at the first
 elementwise derivative and cumulative integral, see [`dg_operators`](@ref)).
 The splitting error is of first order in the time step.
 
-### Parameters
+# Arguments
 - `solver`: ODE solver used for the integration of the (linearly interpolated) rates of
   ``v`` and ``p_0``. Since these rates are linear in time, any Runge-Kutta method gives the
   trapezoidal rule. We recommend `CarpenterKennedy2N54` from `OrdinaryDiffEqLowStorageRK`.
 - `source_terms`: optional additional sources `(x, t, equations) -> SVector(s_p, s_v)` of the
-  ``p_0`` and ``v`` equations (e.g. [`manufactured_source_terms_ode`](@ref)); `nothing`
-  (default) for no sources.
+  ``p_0`` and ``v`` equations (e.g. [`manufactured_source_terms_ode`](@ref)), or `nothing`
+  (default) for no sources. These sources are only used for the manufactured solution.
 
-### Usage
+# Usage
 Use it with the plain Trixi `source_terms` of ``\rho`` and ``T_i`` (e.g. [`source_terms`](@ref)):
 ```julia
 godunov_splitting_callback =
@@ -134,7 +135,7 @@ end
     v1_dx_prev = dg_derivative(v1_prev, ops)
     v_prev = A_nodes[first_node] * v1_prev[first_node]
     T_prev = p0_prev ./ rho_prev
-    Tu_prev = T_u.(t_prev, x, Ti_prev, Ref(equations)) .* equations.t_ref
+    Tu_prev = T_u.(t_prev, x, Ti_prev, Ref(equations))
     s_p_prev, s_v_prev =
         ode_source_terms(godunov_splitting_callback.source_terms, x, t_prev, equations)
     #-----------------------
@@ -163,7 +164,7 @@ end
     p0 = Array(u_now[3, :, :])
     Ti = Array(u_now[4, :, :])
     T = p0 ./ rho
-    Tu = T_u.(t_now, x, Ti, Ref(equations)) .* equations.t_ref
+    Tu = T_u.(t_now, x, Ti, Ref(equations))
     s_p, s_v =
         ode_source_terms(godunov_splitting_callback.source_terms, x, t_now, equations)
     #-----------------------
@@ -233,8 +234,12 @@ F_v = -\rho u u_x - \frac{\beta}{A} \rho u \left(\eta + (1-\eta)|u|\right)
       - \frac{h_x}{Fr^2} (\rho - \rho_{h_0}) \; (+ s_v).
 ```
 The nodal fields `rho`, `v1` (``u``), `v1_dx` (``u_x``), `x` and `A_nodes` are
-`(node, element)` matrices; both integrals are evaluated with the DG quadrature weights `W`.
-`s_v` is an optional nodal source (`nothing`: no source).
+`(node, element)` matrices. Both integrals are evaluated with the DG quadrature weights `W`.
+`s_v` is an optional nodal source, only used for the manufactured solution (`nothing`: no
+source).
+
+# Returns
+The rate ``v'`` (a scalar).
 """
 function v_rhs(rho, v1, v1_dx, x, A_nodes, W, equations, s_v = nothing)
     @unpack β, η, ρₕ₀, Fr² = equations
@@ -244,7 +249,8 @@ function v_rhs(rho, v1, v1_dx, x, A_nodes, W, equations, s_v = nothing)
 end
 
 @doc raw"""
-    p0_rhs(p0, v1, v1_dx, T, Tu, A_nodes, A_x_nodes, A_sqrt_A_inv, I_w_nodes, W, equations, s_p = nothing)
+    p0_rhs(p0, v1, v1_dx, T, Tu, A_nodes, A_x_nodes, A_sqrt_A_inv, I_w_nodes, W, equations,
+           s_p = nothing)
 
 Right-hand side of the ODE for the spatially constant pressure ``p_0``, the ``A``-weighted
 domain average
@@ -255,8 +261,12 @@ f_p = -\gamma p_0 u_x - \gamma \frac{A_x}{A} u p_0 - \frac{I_w k_w}{\sqrt{A}} (T
 ```
 This follows from integrating the pointwise ``p_0`` equation over the domain: the term
 ``-\gamma p_0 (A u)_x / A`` vanishes after multiplication by ``A`` and integration
-(periodicity). The nodal fields are `(node, element)` matrices; the integrals are evaluated
-with the DG quadrature weights `W`. `s_p` is an optional nodal source (`nothing`: no source).
+(periodicity). The nodal fields are `(node, element)` matrices. The integrals are evaluated
+with the DG quadrature weights `W`. `s_p` is an optional nodal source, only used for the
+manufactured solution (`nothing`: no source).
+
+# Returns
+The rate ``p_0'`` (a scalar).
 """
 function p0_rhs(
     p0,
@@ -281,14 +291,16 @@ end
 @doc raw"""
     ode_source_terms(source_terms, x, t, equations)
 
-Evaluates the optional sources of the ODE step at the nodes `x` (`(node, element)` matrix) and
+Evaluate the optional sources of the ODE step at the nodes `x` (`(node, element)` matrix) and
 time `t`. `source_terms(x, t, equations)` returns `SVector(s_p, s_v)`:
 - `s_p` is added pointwise to the right-hand side of the ``p_0`` equation ([`p0_rhs`](@ref))
-  and hence also to ``Q`` in the velocity constraint,
+  and hence, as ``s_p / (\gamma p_0)``, also to ``Q`` in the velocity constraint,
 - `s_v` is added to the integrand of the ``v`` equation ([`v_rhs`](@ref)).
+These sources are only used for the manufactured solution.
 
-Returns the nodal matrices `(s_p, s_v)`, or `(nothing, nothing)` if
-`source_terms === nothing` (no sources, no extra work).
+# Returns
+The nodal matrices `(s_p, s_v)`, or `(nothing, nothing)` if `source_terms === nothing` (no
+sources, no extra work).
 """
 ode_source_terms(::Nothing, x, t, equations) = (nothing, nothing)
 function ode_source_terms(source_terms, x, t, equations)

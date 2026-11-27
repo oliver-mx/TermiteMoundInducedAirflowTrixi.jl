@@ -1,7 +1,7 @@
 # TermiteMoundInducedAirflowTrixi
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/dev/)
 [![Build Status](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml/badge.svg?)](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/graph/badge.svg?token=w06WNAQpNI)](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
@@ -9,7 +9,7 @@
 
 Documentation for [TermiteMoundInducedAirflowTrixi.jl](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl).
 
-**TermiteMoundInducedAirflowTrixi.jl** is a numerical simulation package written in Julia. It solves a thermo-fluid-dynamic model of the airflow inside a termite mound with the discontinuous Galerkin method. The package builds on the numerical simulation framework for conservation laws [Trixi.jl](https://github.com/trixi-framework/Trixi.jl). It provides a specialized model to simulate airflow inside termite mounds.
+**TermiteMoundInducedAirflowTrixi.jl** is a numerical simulation package written in Julia. It solves a thermo-fluid-dynamic model of the airflow inside a termite mound with the discontinuous Galerkin method. The package builds on the numerical simulation framework for conservation laws [Trixi.jl](https://github.com/trixi-framework/Trixi.jl).
 
 ## The termite mound model (TME)
 
@@ -51,7 +51,7 @@ u(t, x) &= \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x \frac{A(y)}{\gamma p_0}
   of the ambient air temperature and ``T_i`` in the flute, and ``T_i`` in the chimney.
 
 The last equation is the **velocity constraint**. Since ``p_0`` does not depend on ``x``, the
-``p_0`` equation does not evolve a field; it determines the velocity ``u``. The model is
+``p_0`` equation does not evolve a field. Instead, it determines the velocity ``u``. The model is
 therefore a system of a transport PDE for ``\rho``, ODEs for ``v`` and ``p_0``, an ODE for
 ``T_i`` at every point ``x`` (``T_i`` is not transported) and an algebraic equation for ``u``.
 
@@ -83,12 +83,9 @@ To run the examples, **TermiteMoundInducedAirflowTrixi.jl**, **Trixi.jl**
 (DG solver framework), **OrdinaryDiffEqLowStorageRK.jl** (time integration) and **Plots.jl**
 (visualization) can be added and installed by executing the following commands in the Julia REPL:
 ```julia
-julia> using Pkg
-
-julia> Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "OrdinaryDiffEqLowStorageRK", "Plots"])
+using Pkg
+Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "OrdinaryDiffEqLowStorageRK", "Plots"])
 ```
-You can copy and paste all commands to the REPL *including* the leading
-`julia>` prompts - they will automatically be stripped away by Julia.
 
 ## Referencing
 
@@ -100,6 +97,7 @@ You can directly refer to TermiteMoundInducedAirflowTrixi.jl as
   author={Marx, Oliver P and Gasser, Ingenuin and Schmidgall, Annika},
   year={2026},
   howpublished={\url{https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl}},
+  url = {https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl},
   license = {MIT},
   doi = {10.5281/zenodo.22708420}
 }

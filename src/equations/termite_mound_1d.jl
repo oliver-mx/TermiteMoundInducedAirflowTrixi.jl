@@ -13,7 +13,7 @@ Termite mound equations (TME) in one space dimension: a low Mach number model of
 through the closed flow channel of a termite mound (soil → flute → chimney → soil),
 parametrized by ``x \in [0, 1]`` (periodic). All quantities are scaled.
 
-### Equations
+# Equations
 ```math
 \begin{aligned}
 \rho_t + (\rho u)_x &= -\frac{A_x}{A} \rho u, \\
@@ -35,22 +35,22 @@ u(t, x) = \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x A (Q - c) \, dy,
 ```
 so that ``v = A(0) u(t, 0)`` is the volume flux at ``x = 0``.
 
-### Unknowns and state vector
+# Unknowns and state vector
 The unknowns are the air density ``\rho``, the air velocity ``u``, the leading-order pressure
 ``p_0`` (spatially constant), the mound material temperature ``T_i`` and the auxiliary
 velocity ``v``. The state vector at every node is `(rho, v1, p, Ti)` =
-``(\rho, u, p_0, T_i)``; ``v`` is not stored separately (see [`GodunovSplittingCallback`](@ref)
-and [`CoupledSourceTerms`](@ref)).
+``(\rho, u, p_0, T_i)``. The velocity ``v`` is not stored separately (see
+[`GodunovSplittingCallback`](@ref) and [`CoupledSourceTerms`](@ref)).
 
-### Model data
+# Model data
 The cross section, the height profile and the boundary temperature are passed as objects
-(required keyword arguments, see below); the heat transfer factor is fixed:
+(required keyword arguments, see below), while the heat transfer factor is fixed:
 - cross section ``A(x)`` and ``A_x(x)`` (`cross_section`, see [`A`](@ref)),
 - slope of the height profile ``h_x(x)`` (`height_profile`, see [`h_x`](@ref)),
 - boundary temperature ``T_u(t, x, T_i)`` (`boundary_temperature`, see [`T_u`](@ref)),
 - spatially variable heat transfer coefficient ``\alpha_w I_w(x)`` ([`I_w`](@ref)).
 
-### Usage
+# Usage
 ```julia
 (γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0, Ti_LI) =
     termite_parameters(1.5, 2.5)
@@ -62,13 +62,13 @@ equations = TermiteMoundEquations1D(; γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h
                                     cross_section, height_profile, boundary_temperature)
 ```
 
-### Keyword arguments
+# Arguments
 The scalar arguments are usually created by [`termite_parameters`](@ref). Their defaults are
 those of `termite_parameters(0.6, 2.0)` (mound radius 0.6 m, height 2 m), except
 `v0 = -2.219` and a simple three-point `Ti_LI`.
 - `γ`: adiabatic exponent.
 - `k_i`: heat exchange rate between air and mound material (``T_i`` equation).
-- `k_w`: wall heat transfer coefficient (``p_0`` equation, contains ``\alpha_w``).
+- `k_w`: scaled wall heat transfer coefficient (``p_0`` equation, contains ``\alpha_w``).
 - `tᵣ`: reference time ``L/u_r`` (s). `uᵣ`: reference velocity (m/s).
 - `xa`, `xb`, `xc`: scaled positions of the transitions soil → flute, flute → chimney (top
   of the mound) and chimney → soil (see [`mound_geometry`](@ref)).
@@ -76,8 +76,8 @@ those of `termite_parameters(0.6, 2.0)` (mound radius 0.6 m, height 2 m), except
 - `β`: friction coefficient. `η`: viscosity.
 - `Fr²`: squared Froude number ``u_r^2/(gL)``. `ρₕ₀`: scaled reference density of the
   buoyancy term.
-- `T_ref`: reference temperature (K). `t_ref`: its inverse ``1/T_{ref}`` (1/K), used to scale
-  ``T_u`` (which is computed in K).
+- `T_ref`: reference temperature (K), used to scale temperatures. `t_ref`: its inverse
+  ``1/T_{ref}`` (1/K).
 - `T0`: initial air temperature (°C). `v0`: initial velocity (cm/s).
 - `Ti_LI`: initial mound material temperature (°C) as an interpolation object on ``[0, 1]``.
 - `cross_section` (required): cross section of the flow channel, e.g.
@@ -125,13 +125,13 @@ struct TermiteMoundEquations1D{
     boundary_temperature::BoundaryTemperatureType
     function TermiteMoundEquations1D(;
         γ = 1.3987529976019184,
-        k_i = 0.0006167609978013738,
+        k_i = 0.0005866265254324977,
         k_w = 5.285934848600675,
         tᵣ = 101.17763390064094,
         uᵣ = 0.05,
         xa = 0.1326025065794086,
         xb = 0.5453540646624214,
-        xc = 0.9822095068780948,
+        xc = 0.9406983562603158,
         r = 0.6,
         h = 2.0,
         L = 5.058881695032047,
@@ -191,16 +191,19 @@ end
 #  [DOI: ...](https://doi.org/...)
 
 @doc raw"""
-    termite_parameters(r, height; g=9.81, R=8.314, M=0.0289652, c_v=20.85, α_w = 1.1, D0 = 0.05, ρₕ₀ = 0.982, η = 0.93, uᵣ = 0.05, ρᵣ = 1.17, pᵣ = 1, c_v_ = 790, κ = 0.184, T_ref = 297.76980029566033, t_ref = 0.0033582989242263127, T0 = 27.0, v0 = -5.0)
+    termite_parameters(r, height; g = 9.81, R = 8.314, M = 0.0289652, c_v = 20.85,
+                       α_w = 1.1, D0 = 0.05, ρₕ₀ = 0.982, η = 0.93, uᵣ = 0.05, ρᵣ = 1.17,
+                       pᵣ = 1, c_v_ = 790, κ = 0.184, T_ref = 297.76980029566033,
+                       t_ref = 0.0033582989242263127, T0 = 27.0, v0 = -5.0)
 
-Computes the (scaled) parameters of the termite mound model for a mound with radius `r` and
+Compute the (scaled) parameters of the termite mound model for a mound with radius `r` and
 height `height` (both in m).
 
 The main steps are:
 - geometry: channel length ``L`` and transitions ``x_a, x_b, x_c`` ([`mound_geometry`](@ref)),
 - reference scales: ``x_r = L``, ``t_r = L/u_r``, ``Fr^2 = u_r^2/(gL)``,
 - adiabatic exponent ``\gamma = (c_v + R)/c_v`` with the specific gas constant ``R/M`` and
-  ``c_v/M``,
+  the specific heat capacity ``c_v/M``,
 - friction coefficient ``\beta = \lambda_w x_r \sqrt{\pi}/(4\sqrt{A_r})`` with the pipe
   friction coefficient ``\lambda_w = 64/Rey``, the Reynolds number ``Rey`` and the cross section
   ``A_r = \pi (D_0/2)^2``,
@@ -211,31 +214,30 @@ The main steps are:
   mound material, and the length ``L_i = x_r (x_c - x_a)`` of the channel inside the mound,
 - initial mound material temperature profile ``T_i`` ([`Get_initial_Ti`](@ref)).
 
-### Parameters
+# Arguments
 - `r`: radius of the mound (m).
 - `height`: height of the mound (m).
+- `g`: gravitational acceleration (m/s²). Default: `9.81`.
+- `R`: universal gas constant (J/(mol·K)). Default: `8.314`.
+- `M`: molar mass of air (kg/mol). Default: `0.0289652`.
+- `c_v`: molar heat capacity of air at constant volume (J/(mol·K)). Default: `20.85`.
+- `α_w`: wall heat transfer coefficient. It is made variable in space by the factor
+  [`I_w`](@ref) in the equations. Default: `1.1`.
+- `D0`: diameter of the flow channel (m). Default: `0.05`.
+- `ρₕ₀`: scaled reference density of the buoyancy term. Default: `0.982`.
+- `η`: viscosity. Default: `0.93`.
+- `uᵣ`: reference velocity (m/s). Default: `0.05`.
+- `ρᵣ`: reference density (kg/m³). Default: `1.17`.
+- `pᵣ`: reference pressure (Pa). Default: `1`.
+- `c_v_`: specific heat capacity of the mound material (J/(kg·K)). Default: `790`.
+- `κ`: thermal conductivity of the mound material (W/(m·K)). Default: `0.184`.
+- `T_ref`: reference temperature (K). Default: `297.76980029566033`.
+- `t_ref`: inverse reference temperature ``1/T_{ref}`` (1/K). Default:
+  `0.0033582989242263127`.
+- `T0`: initial air temperature (°C). Default: `27.0`.
+- `v0`: initial velocity (cm/s). Default: `-5.0`.
 
-### Optional parameters
-- `g`: gravitational acceleration (default: 9.81 m/s²).
-- `R`: universal gas constant (default: 8.314 J/(mol·K)).
-- `M`: molar mass of air (default: 0.0289652 kg/mol).
-- `c_v`: molar heat capacity of air at constant volume (default: 20.85 J/(mol·K)).
-- `α_w`: wall heat transfer coefficient (default: 1.1). It is made variable in space by the
-  factor [`I_w`](@ref) in the equations.
-- `D0`: diameter of the flow channel (default: 0.05 m).
-- `ρₕ₀`: scaled reference density of the buoyancy term (default: 0.982).
-- `η`: viscosity (default: 0.93).
-- `uᵣ`: reference velocity (default: 0.05 m/s).
-- `ρᵣ`: reference density (default: 1.17 kg/m³).
-- `pᵣ`: reference pressure (default: 1 Pa).
-- `c_v_`: specific heat capacity of the mound material (default: 790 J/(kg·K)).
-- `κ`: thermal conductivity of the mound material (default: 0.184 W/(m·K)).
-- `T_ref`: reference temperature (default: 297.76980029566033 K).
-- `t_ref`: inverse reference temperature ``1/T_{ref}`` (default: 0.0033582989242263127 1/K).
-- `T0`: initial air temperature (default: 27.0 °C).
-- `v0`: initial velocity (default: -5.0 cm/s).
-
-### Returns
+# Returns
 A 20-tuple `(γ, k_i, k_w, tᵣ, uᵣ, xa, xb, xc, r, h, L, β, η, Fr², ρₕ₀, T_ref, t_ref, T0, v0,
 Ti_LI)` of the scalar keyword arguments of [`TermiteMoundEquations1D`](@ref). The model data
 `cross_section`, `height_profile` and `boundary_temperature` are not included and are passed
@@ -315,11 +317,15 @@ Geometry of the flow channel of a mound with radius `r` and height `h` (both in 
 L &= h + 0.3 + \sqrt{0.09 + r^2} + \sqrt{r^2 + h^2}, \\
 x_a &= \frac{\sqrt{0.09 + r^2}}{L}, \qquad
 x_b = \frac{\sqrt{0.09 + r^2} + \sqrt{r^2 + h^2}}{L}, \qquad
-x_c = \frac{L - 0.09}{L}.
+x_c = \frac{L - 0.3}{L}.
 \end{aligned}
 ```
+The channel consists of four sections: the soil section from 30 cm depth to the flute
+(length ``\sqrt{0.09 + r^2}``), the flute up to the top of the mound (length
+``\sqrt{r^2 + h^2}``), the chimney down to the ground (length ``h``) and the soil section back
+to 30 cm depth (length 0.3 m).
 
-### Returns
+# Returns
 `(L, xa, xb, xc)`: the channel length `L` (m) and the scaled positions `xa` (soil → flute),
 `xb` (flute → chimney, top of the mound) and `xc` (chimney → soil).
 """
@@ -327,41 +333,40 @@ function mound_geometry(r, h)
     L = h + 0.3 + sqrt(0.09 + r * r) + sqrt(r * r + h * h)
     xa = sqrt(0.09 + r * r) / L
     xb = (sqrt(0.09 + r * r) + sqrt(r * r + h * h)) / L
-    xc = (L - 0.09) / L
+    xc = (L - 0.3) / L
     return L, xa, xb, xc
 end
 
 @doc raw"""
-    Trixi.varnames(u, ::TermiteMoundEquations1D)
+    Trixi.varnames(conversion_function, equations::TermiteMoundEquations1D)
 
-Names of the four variables of the state vector, used for output and plotting.
+Names of the four variables of the state vector, used for output and plotting. The names are
+the same for every `conversion_function`, since the state is stored in primitive variables.
 
-### Returns
+# Returns
 `("rho", "v1", "p", "Ti")`: density ``\rho``, velocity ``u``, leading-order pressure ``p_0``
 and mound material temperature ``T_i``.
 """
-function varnames(u, ::TermiteMoundEquations1D)
+function varnames(conversion_function, ::TermiteMoundEquations1D)
     return ("rho", "v1", "p", "Ti")
 end
 
 @doc raw"""
-    Trixi.cons2prim(u, ::TermiteMoundEquations1D)
+    cons2prim(u, equations::TermiteMoundEquations1D)
 
 Primitive variables of the state `u`. The state `(rho, v1, p, Ti)` is already stored in
-primitive variables, so this is the identity.
-
-### Returns
-`u` unchanged.
+primitive variables, so this is the identity and returns `u` unchanged.
 """
 function Trixi.cons2prim(u, equations::TermiteMoundEquations1D)
     return u
 end
 
 @doc raw"""
-    Trixi.PlotData1D(u, mesh::TreeMesh, equations::TermiteMoundEquations1D, solver::DGSEM, cache; kwargs...)
+    PlotData1D(u, mesh::TreeMesh, equations::TermiteMoundEquations1D, solver::DGSEM, cache;
+               kwargs...)
 
 Same as Trixi's `PlotData1D`, except for ``T_i``. The mound material temperature is only
-physically meaningful inside the mound, ``x_a < x < x_c`` (see [`T_u`](@ref)). Outside, the
+physically meaningful inside the mound, ``x_a < x \le x_c`` (see [`T_u`](@ref)). Outside, the
 plot data of `Ti` are set to `NaN`, so that plots only show the relevant part. The solution
 itself is not changed.
 
@@ -388,27 +393,24 @@ function Trixi.PlotData1D(
     )
     iTi = findfirst(==("Ti"), pd.variable_names)
     if !isnothing(iTi)
-        outside = .!(equations.xa .< pd.x .< equations.xc)
+        outside = .!(equations.xa .< pd.x .<= equations.xc)
         pd.data[outside, iTi] .= NaN
     end
     return pd
 end
 
 @doc raw"""
-    Trixi.prim2cons(u, ::TermiteMoundEquations1D)
+    prim2cons(u, equations::TermiteMoundEquations1D)
 
-Converts primitive variables `(rho, v1, p, Ti)` to the variables of the state vector. Both are
-identical, so this is the identity.
-
-### Returns
-`u` unchanged.
+Convert primitive variables `(rho, v1, p, Ti)` to the variables of the state vector. Both are
+identical, so this is the identity and returns `u` unchanged.
 """
 function Trixi.prim2cons(u, equations::TermiteMoundEquations1D)
     return u
 end
 
 @doc raw"""
-    Trixi.cons2entropy(u, ::TermiteMoundEquations1D)
+    cons2entropy(u, equations::TermiteMoundEquations1D)
 
 Entropy variables of the state `u = (rho, v1, p, Ti)`, used by the `AnalysisCallback` (e.g.
 for the output ``\sum \partial S/\partial U \cdot U_t``). The first three components are the
@@ -419,10 +421,10 @@ w_2 = \frac{\rho u}{p_0}, \qquad
 w_3 = -\frac{\rho}{p_0}, \qquad
 s = \log p_0 - \gamma \log \rho.
 ```
-The fourth component is ``T_i``. This is a formal adaptation for the analysis output; it is
+The fourth component is ``T_i``. This is a formal adaptation for the analysis output. It is
 not an entropy of the TME.
 
-### Returns
+# Returns
 `SVector(w1, w2, w3, Ti)`.
 """
 function Trixi.cons2entropy(u, equations::TermiteMoundEquations1D)
@@ -445,7 +447,8 @@ end
 @doc raw"""
     TermiteMoundInitialCondition(x, t, equations::TermiteMoundEquations1D)
 
-Initial state of the termite mound simulations (independent of `t`):
+Initial state of the termite mound simulations at the position `x` (vector with one entry),
+independent of the time `t`:
 ```math
 \rho = \frac{1}{T_0}, \qquad u = v_0, \qquad p_0 = 1, \qquad T_i = T_{i,LI}(x),
 ```
@@ -457,12 +460,7 @@ The constant velocity ``u = v_0`` does not satisfy the velocity constraint in ge
 "splitting" method replaces it after the first time step, the "coupled" method at
 initialization ([`AlgebraicVelocityCallback`](@ref)).
 
-### Parameters
-- `x`: position (vector with one entry).
-- `t`: time (not used).
-- `equations`: the [`TermiteMoundEquations1D`](@ref).
-
-### Returns
+# Returns
 `SVector(rho, v1, p, Ti)`.
 """
 @inline function TermiteMoundInitialCondition(x, t, equations::TermiteMoundEquations1D)
@@ -478,7 +476,9 @@ end
 @doc raw"""
     source_terms(u, x, t, equations::TermiteMoundEquations1D)
 
-Source terms of the ``\rho`` and ``T_i`` equations of the TME (handled by Trixi):
+Source terms of the ``\rho`` and ``T_i`` equations of the TME (handled by Trixi) for the state
+vector `u = (rho, v1, p, Ti)` at the position `x` (vector with one entry). They do not depend
+on the time `t`:
 ```math
 s = \left( -\frac{A_x}{A} \rho u, \; 0, \; 0, \; k_i (T - T_i) \right), \qquad T = \frac{p_0}{\rho}.
 ```
@@ -487,13 +487,7 @@ exchange between air and mound material. The `v1` and `p` components are zero: `
 ``p_0`` are updated by the ODE part of the system ([`GodunovSplittingCallback`](@ref) or
 [`CoupledSourceTerms`](@ref)).
 
-### Parameters
-- `u`: state vector `(rho, v1, p, Ti)`.
-- `x`: position (vector with one entry).
-- `t`: time (not used).
-- `equations`: the [`TermiteMoundEquations1D`](@ref).
-
-### Returns
+# Returns
 `SVector(du1, 0, 0, du4)`.
 """
 @inline function source_terms(u, x, t, equations::TermiteMoundEquations1D)
@@ -508,57 +502,41 @@ end
 @doc raw"""
     temp2scaled(y, equations::TermiteMoundEquations1D)
 
-Converts a temperature `y` in °C into a scaled temperature, ``(y + 273.15)/T_{ref}``.
+Convert a temperature `y` in °C into a scaled temperature, ``(y + 273.15)/T_{ref}``.
 Works for scalars and arrays. Inverse of [`temp2unscaled`](@ref).
-
-### Returns
-The scaled temperature.
 """
 @inline function temp2scaled(y, equations::TermiteMoundEquations1D)
-    z = 273.15
-    y = y .+ z
-    x = y ./ equations.T_ref
-    return x
+    return (y .+ 273.15) ./ equations.T_ref
 end
 
 @doc raw"""
-    temp2unscaled(x, equations::TermiteMoundEquations1D)
+    temp2unscaled(y, equations::TermiteMoundEquations1D)
 
-Converts a scaled temperature `x` into a temperature in °C, ``x \, T_{ref} - 273.15``.
+Convert a scaled temperature `y` into a temperature in °C, ``y \, T_{ref} - 273.15``.
 Works for scalars and arrays. Inverse of [`temp2scaled`](@ref).
-
-### Returns
-The temperature in °C.
 """
-@inline function temp2unscaled(x, equations::TermiteMoundEquations1D)
-    z = 273.15
-    return x .* equations.T_ref .- z
+@inline function temp2unscaled(y, equations::TermiteMoundEquations1D)
+    return y .* equations.T_ref .- 273.15
 end
 
 @doc raw"""
     vel2scaled(y, equations::TermiteMoundEquations1D)
 
-Converts a velocity `y` in cm/s into a scaled velocity, ``y/(100 \, u_r)`` with the reference
+Convert a velocity `y` in cm/s into a scaled velocity, ``y/(100 \, u_r)`` with the reference
 velocity ``u_r`` in m/s. Works for scalars and arrays. Inverse of [`vel2unscaled`](@ref).
-
-### Returns
-The scaled velocity.
 """
 @inline function vel2scaled(y, equations::TermiteMoundEquations1D)
     return inv(equations.uᵣ * 100) .* y
 end
 
 @doc raw"""
-    vel2unscaled(x, equations::TermiteMoundEquations1D)
+    vel2unscaled(y, equations::TermiteMoundEquations1D)
 
-Converts a scaled velocity `x` into a velocity in cm/s, ``100 \, u_r \, x``. Works for
+Convert a scaled velocity `y` into a velocity in cm/s, ``100 \, u_r \, y``. Works for
 scalars and arrays. Inverse of [`vel2scaled`](@ref).
-
-### Returns
-The velocity in cm/s.
 """
-@inline function vel2unscaled(x, equations::TermiteMoundEquations1D)
-    return x .* equations.uᵣ * 100
+@inline function vel2unscaled(y, equations::TermiteMoundEquations1D)
+    return y .* equations.uᵣ * 100
 end
 
 @doc raw"""
@@ -584,14 +562,13 @@ the buoyancy term of the ``v`` equation), given by `equations.height_profile` (s
 @doc raw"""
     T_u(t, x, Ti, equations::TermiteMoundEquations1D)
 
-Boundary (wall) temperature ``T_u`` in K at the scaled time `t`, the scalar position `x` and
+Scaled boundary (wall) temperature ``T_u`` at the scaled time `t`, the scalar position `x` and
 the scaled mound material temperature `Ti` at `x`, given by `equations.boundary_temperature`
-(see [`BoundaryTemperatureTermiteMound`](@ref) and [`BoundaryTemperature`](@ref)). Multiply by
-`t_ref` ``= 1/T_{ref}`` to obtain the scaled temperature.
+(see [`BoundaryTemperatureTermiteMound`](@ref) and [`BoundaryTemperature`](@ref)).
 
 For efficiency, the solvers evaluate the time-only part once for all nodes,
 `time_data = T_u_time(t, equations)`, and then `T_u_node(time_data, x, Ti, equations)` at
-every node; both give the same result as `T_u(t, x, Ti, equations)`.
+every node. Both give the same result as `T_u(t, x, Ti, equations)`.
 """
 @inline T_u(t, x, Ti, equations::TermiteMoundEquations1D) =
     T_u(t, x, Ti, equations.boundary_temperature)
@@ -604,8 +581,9 @@ end
 @doc raw"""
     I_w(x, equations::TermiteMoundEquations1D)
 
-Spatial factor ``I_w(x)`` of the wall heat transfer coefficient. **It makes the heat transfer
-coefficient ``\alpha_w`` variable in space**: the effective coefficient at ``x`` is
+Spatial factor ``I_w(x)`` of the wall heat transfer coefficient at the scalar position `x`.
+**It makes the heat transfer coefficient ``\alpha_w`` variable in space**: the effective
+coefficient at ``x`` is
 ``\alpha_w I_w(x)``. Since ``k_w`` is proportional to ``\alpha_w`` (see
 [`termite_parameters`](@ref)), the heat transfer term of the ``p_0`` equation reads
 ``-I_w(x) \, k_w (T - T_u)/\sqrt{A}``.
@@ -617,9 +595,6 @@ I_w(x) = \begin{cases}
 ```
 So the heat transfer in the soil sections is half of that inside the mound.
 
-### Parameters
-- `x`: position (scalar).
-- `equations`: the [`TermiteMoundEquations1D`](@ref).
 """
 @inline function I_w(x, equations::TermiteMoundEquations1D)
     if x ≤ equations.xa
@@ -632,16 +607,11 @@ So the heat transfer in the soil sections is half of that inside the mound.
 end
 
 @doc raw"""
-    Trixi.flux(u, orientation::Integer, ::TermiteMoundEquations1D)
+    flux(u, orientation, equations::TermiteMoundEquations1D)
 
 Physical flux of the TME at a single point, ``f(u) = (\rho u, 0, 0, 0)``. Only the ``\rho``
 equation is in conservation form. ``u`` and ``p_0`` are updated by the ODE part of the system,
 and the ``T_i`` equation has no flux.
-
-### Parameters
-- `u`: state vector `(rho, v1, p, Ti)`.
-- `orientation`: orientation (always `1` in 1D).
-- `equations`: the [`TermiteMoundEquations1D`](@ref).
 """
 @inline function Trixi.flux(u, orientation::Integer, equations::TermiteMoundEquations1D)
     rho, v1, _, _ = u
@@ -650,10 +620,10 @@ and the ``T_i`` equation has no flux.
 end
 
 @doc raw"""
-    flux_ranocha(u_ll, u_rr, orientation::Integer, ::TermiteMoundEquations1D)
+    flux_ranocha(u_ll, u_rr, orientation, equations::TermiteMoundEquations1D)
 
-Two-point volume flux for the flux differencing volume integral (`VolumeIntegralFluxDifferencing`),
-built from logarithmic means as in Ranocha's flux for the Euler equations. Only the mass flux
+Two-point volume flux for the flux differencing volume integral
+(`VolumeIntegralFluxDifferencing`), built from logarithmic means as in Ranocha's flux for the Euler equations. Only the mass flux
 is nonzero:
 ```math
 f_1 = \rho^{\ln} \, \bar u, \qquad
@@ -668,12 +638,7 @@ The logarithmic mean of the velocity is only defined for values of the same sign
 arithmetic mean is used if the sign changes. The flux is consistent: ``f_1 = \rho u`` for
 ``u_{ll} = u_{rr}``.
 
-### Parameters
-- `u_ll`, `u_rr`: left and right state vectors `(rho, v1, p, Ti)`.
-- `orientation`: orientation (always `1` in 1D).
-- `equations`: the [`TermiteMoundEquations1D`](@ref).
-
-### Returns
+# Returns
 `SVector(f1, 0, 0, 0)`.
 """
 @inline function flux_ranocha(
@@ -697,20 +662,19 @@ arithmetic mean is used if the sign changes. The flux is consistent: ``f_1 = \rh
 end
 
 @doc raw"""
-    Trixi.flux_hllc(u_ll, u_rr, orientation, ::TermiteMoundEquations1D)
+    flux_hllc(u_ll, u_rr, orientation, equations::TermiteMoundEquations1D)
 
 Surface flux: the mass component of the HLLC flux (HLL with contact) of the compressible
 Euler equations by E. F. Toro, evaluated with ``(\rho, u, p_0)`` (``p_0`` as pressure, total
 energy ``p_0/(\gamma - 1) + \rho u^2/2``, sound speed ``\sqrt{\gamma p_0/\rho}``).
-- [Lecture slides](http://www.prague-sum.com/download/2012/Toro_2-HLLC-RiemannSolver.pdf)
-- Signal speeds (Einfeldt estimates with Roe averages):
-  [DOI: 10.1137/S1064827593260140](https://doi.org/10.1137/S1064827593260140)
+The signal speeds are the Einfeldt estimates with Roe averages,
+[DOI: 10.1137/S1064827593260140](https://doi.org/10.1137/S1064827593260140).
 
 Only the mass component is computed, since only the ``\rho`` equation has a flux. It needs:
 - the signal speeds ``S_L = \min(u_{ll} - c_{ll}, \tilde u - \tilde c)`` and
   ``S_R = \max(u_{rr} + c_{rr}, \tilde u + \tilde c)`` with the Roe averages ``\tilde u`` and
   ``\tilde c`` (the latter from the Roe-averaged enthalpy, hence the total energy),
-- the contact speed ``S^*`` and the density ``\rho^*`` of the star region on the side of the
+- the contact speed ``S^*`` and the density ``\rho^*`` of the star region on each side of the
   interface.
 
 The flux is then
@@ -729,12 +693,7 @@ through the acoustic signal speeds provides the numerical dissipation at element
 A second method with a `normal_direction::AbstractVector` rotates the velocity to the normal
 direction, calls this method and scales the result by the length of the normal vector.
 
-### Parameters
-- `u_ll`, `u_rr`: left and right state vectors `(rho, v1, p, Ti)`.
-- `orientation`: orientation (always `1` in 1D).
-- `equations`: the [`TermiteMoundEquations1D`](@ref).
-
-### Returns
+# Returns
 `SVector(f1, 0, 0, 0)`.
 """
 function Trixi.flux_hllc(
@@ -823,11 +782,7 @@ Maximum absolute wave speed at a single point, ``|u| + c`` with the sound speed
 `v1` field must therefore contain the current velocity ``u`` (see
 [`AlgebraicVelocityCallback`](@ref) for the "coupled" method).
 
-### Parameters
-- `u`: state vector `(rho, v1, p, Ti)`.
-- `equations`: the [`TermiteMoundEquations1D`](@ref).
-
-### Returns
+# Returns
 `(abs(v1) + c,)` (a 1-tuple in 1D).
 """
 @inline function Trixi.max_abs_speeds(u, equations::TermiteMoundEquations1D)
@@ -837,7 +792,7 @@ Maximum absolute wave speed at a single point, ``|u| + c`` with the sound speed
 end
 
 @doc raw"""
-    Trixi.max_abs_speed_naive(u_ll, u_rr, orientation::Integer, equations::TermiteMoundEquations1D)
+    max_abs_speed_naive(u_ll, u_rr, orientation, equations::TermiteMoundEquations1D)
 
 Estimate of the maximum wave speed between two states for local Lax-Friedrichs-type
 dissipation:
@@ -845,14 +800,6 @@ dissipation:
 \lambda_{max} = \max(|u_{ll}|, |u_{rr}|) + \max(c_{ll}, c_{rr}), \qquad
 c = \sqrt{\gamma p_0/\rho}.
 ```
-
-### Parameters
-- `u_ll`, `u_rr`: left and right state vectors `(rho, v1, p, Ti)`.
-- `orientation`: orientation (always `1` in 1D).
-- `equations`: the [`TermiteMoundEquations1D`](@ref).
-
-### Returns
-The wave speed estimate ``\lambda_{max}``.
 """
 @inline function Trixi.max_abs_speed_naive(
     u_ll,
@@ -908,23 +855,25 @@ const TI_PARAMS = [
 Initial mound material temperature (°C) at position `x`:
 ```math
 T_i(x) = \begin{cases}
-  T_a & x \le x_a, \\
+  T_a & x \le x_a \quad \text{(soil)}, \\
   T_a + (T_b - T_a) \dfrac{x - x_a}{x_b - x_a} & x_a < x \le x_b \quad \text{(flute)}, \\[1ex]
   T_c + (T_b - T_c) \dfrac{e^{-k\eta} - e^{-k}}{1 - e^{-k}},
-    \quad \eta = \dfrac{x - x_b}{x_c - x_b} & x_b < x < x_c \quad \text{(chimney)}, \\[1ex]
-  T_c & x \ge x_c.
+    \quad \eta = \dfrac{x - x_b}{x_c - x_b} & x_b < x \le x_c \quad \text{(chimney)}, \\[1ex]
+  T_c & x > x_c \quad \text{(soil)}.
 \end{cases}
 ```
-The profile rises linearly from `Ta` at `xa` to the maximum `Tb` at the top of the mound `xb`,
-then decays to `Tc` at `xc` with curvature `k`. The decay is linear for `k < 1e-8`. Outside of
-``[x_a, x_c]``, the profile is constant; there ``T_i`` does not enter the model.
+The profile rises linearly from ``T_a`` at ``x_a`` to the maximum ``T_b`` at the top of the
+mound ``x_b``, then decays to ``T_c`` at ``x_c`` with the decay rate ``k``. The decay is
+linear for `k < 1e-8`.
+Outside of ``(x_a, x_c]``, the profile is constant, since ``T_i`` does not enter the model
+there.
 """
 function Ti_profile(x, Ta, Tb, Tc, k, xa, xb, xc)
     if x <= xa
         return Ta
     elseif x <= xb
         return Ta + (Tb - Ta) * (x - xa) / (xb - xa)
-    elseif x < xc
+    elseif x <= xc
         η = (x - xb) / (xc - xb)
         g = k < 1e-8 ? 1 - η : (exp(-k * η) - exp(-k)) / (1 - exp(-k))
         return Tc + (Tb - Tc) * g
@@ -948,12 +897,12 @@ Initial profile of the mound material temperature (°C) of a mound with radius `
 
 The table contains least-squares fits to quasi-periodic states of multi-day simulations.
 
-### Parameters
+# Arguments
 - `r`: radius of the mound (m).
 - `h`: height of the mound (m).
-- `n_samples`: number of equidistant sample points (default: 513).
+- `n_samples`: number of equidistant sample points. Default: `513`.
 
-### Returns
+# Returns
 A linear interpolation object on ``[0, 1]`` (constant extrapolation), stored as `Ti_LI` in
 [`TermiteMoundEquations1D`](@ref).
 """

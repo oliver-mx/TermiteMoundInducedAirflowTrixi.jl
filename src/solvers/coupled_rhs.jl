@@ -11,7 +11,7 @@
 # velocity constraint in every right-hand side evaluation.
 #
 # The ODE state is the usual Trixi state (rho, v1, p0, Ti):
-# - p0 is spatially constant; every node gets the same dp0/dt, so it stays exactly uniform.
+# - p0 is spatially constant. Every node gets the same dp0/dt, so it stays exactly uniform.
 # - v is stored in the v1 field: v = A(x_min) v1(x_min) (the cumulative integral I_0 vanishes at
 #   the first node). Every node gets dv1/dt = (dv/dt) / A, i.e. only the first node carries
 #   information, the other v1 entries are recomputed from the state.
@@ -25,38 +25,41 @@
 @doc raw"""
     CoupledSourceTerms(source_terms; ode_source_terms = nothing)
 
-Selects the "coupled" method, a coupled method of lines for the TME, when passed as
+Select the "coupled" method, a coupled method of lines for the TME, when passed as
 `source_terms` to `SemidiscretizationHyperbolic`. The ODEs for ``v`` and ``p_0`` are part of
 the right-hand side `Trixi.rhs!` and are integrated together with the transport PDE for
-``\rho`` and the ODE for ``T_i`` at every node by OrdinaryDiffEq (no operator splitting). The velocity ``u`` is the algebraic variable
-of the system: it is computed from the velocity constraint in every right-hand side evaluation
-(every Runge-Kutta stage).
+``\rho`` and the ODE for ``T_i`` at every node by OrdinaryDiffEq (no operator splitting). The
+velocity ``u`` is the algebraic variable of the system: it is computed from the velocity
+constraint in every right-hand side evaluation (every Runge-Kutta stage).
 
 In every right-hand side evaluation:
 1. the state is copied into a buffer and the velocity ``u = (v + I_0)/A`` is computed from it
    ([`compute_algebraic_velocity!`](@ref)),
 2. the Trixi right-hand side of ``\rho`` and ``T_i`` is evaluated on this state with the inner
    `source_terms`,
-3. the right-hand sides of ``v`` and ``p_0`` are evaluated ([`ode_rhs`](@ref)); every node
+3. the right-hand sides of ``v`` and ``p_0`` are evaluated ([`ode_rhs`](@ref)). Every node
    gets ``\mathrm{d}p_0/\mathrm{d}t`` in the `p` field and ``(\mathrm{d}v/\mathrm{d}t)/A`` in the
    `v1` field (``v = A(x_{min}) \, v_1(x_{min})`` is stored at the first node).
 
 Operators and work arrays are precomputed when the semidiscretization is created, so the
 right-hand side does not allocate.
 
-### Parameters
+# Arguments
 - `source_terms`: source terms of the ``\rho`` and ``T_i`` equations (e.g.
   [`source_terms`](@ref)).
 - `ode_source_terms`: optional additional sources `(x, t, equations) -> SVector(s_p, s_v)` of
-  the ``p_0`` and ``v`` equations (e.g. [`manufactured_source_terms_ode`](@ref)); `nothing`
-  (default) for no sources.
+  the ``p_0`` and ``v`` equations (e.g. [`manufactured_source_terms_ode`](@ref)), or `nothing`
+  (default) for no sources. These sources are only used for the manufactured solution.
 
-### Usage
-Use it together with the [`AlgebraicVelocityCallback`](@ref):
+# Usage
+Use it together with the [`AlgebraicVelocityCallback`](@ref), placed before the
+`StepsizeCallback`:
 ```julia
 semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, dg,
                                     source_terms = CoupledSourceTerms(source_terms),
                                     boundary_conditions = boundary_condition_periodic)
+algebraic_velocity_callback = AlgebraicVelocityCallback()
+callbacks = CallbackSet(summary_callback, algebraic_velocity_callback, stepsize_callback)
 ```
 
 !!! note
@@ -173,14 +176,16 @@ end
 @doc raw"""
     compute_algebraic_velocity!(u, t, equations, ode_source_terms, tc)
 
-Overwrites the `v1` field of the state `u` (the node values of the velocity, except at the
-first node) with the algebraic velocity ``u = (v + I_0(x)) / A`` determined by the current
-state, where
+Overwrite the `v1` field of the state vector `u` (the node values of the velocity ``u``,
+except at the first node) with the algebraic velocity ``u = (v + I_0(x)) / A`` determined by
+the current state, where
 ```math
 v = A(x_{min}) v_1(x_{min}), \quad I_0(x) = \int_{x_{min}}^x A (Q - c) \, dy, \quad
 Q = \frac{-I_w k_w (T - T_u)/\sqrt{A} + s_p}{\gamma p_0}, \quad
 c = \frac{\int A Q \, dx}{\int A \, dx}.
 ```
+- The source ``s_p`` of the ``p_0`` equation is only used for the manufactured solution
+  (``s_p = 0`` otherwise).
 - ``T_u`` is evaluated with the time-only part computed once (`T_u_time`, `T_u_node`, see
   [`T_u`](@ref)).
 - ``I_0`` is the exact integral of the elementwise interpolation polynomial of ``A (Q - c)``
@@ -193,7 +198,7 @@ Used by the right-hand side of [`CoupledSourceTerms`](@ref) and by the
 [`AlgebraicVelocityCallback`](@ref).
 """
 function compute_algebraic_velocity!(u, t, equations, ode_source_terms::F, tc) where {F}
-    @unpack γ, k_w, t_ref = equations
+    @unpack γ, k_w = equations
     @unpack x, A_nodes, A_inv, A_sqrt_A_inv, I_w_nodes, AW, sum_AW, first_node = tc
     @unpack Q, T, Tu, s_p, s_v, v1 = tc
     p0 = u[3, first_node]
@@ -204,7 +209,7 @@ function compute_algebraic_velocity!(u, t, equations, ode_source_terms::F, tc) w
     c = zero(eltype(Q))
     @inbounds for e in axes(Q, 2), i in axes(Q, 1)
         T[i, e] = p0 / u[1, i, e]
-        Tu[i, e] = T_u_node(T_u_time_t, x[i, e], u[4, i, e], equations) * t_ref
+        Tu[i, e] = T_u_node(T_u_time_t, x[i, e], u[4, i, e], equations)
         s_p[i, e], s_v[i, e] = ode_sources(ode_source_terms, x[i, e], t, equations)
         Q[i, e] =
             (
@@ -269,7 +274,7 @@ formulas, computed here in one loop over the nodes with the DG quadrature weight
 `u` must have the velocity computed by [`compute_algebraic_velocity!`](@ref), which also fills
 the work arrays of `tc`.
 
-### Returns
+# Returns
 `(dv, dp0)`.
 """
 function ode_rhs(u, equations, tc)

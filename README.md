@@ -1,7 +1,7 @@
 # TermiteMoundInducedAirflowTrixi
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/dev/)
 [![Build Status](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml/badge.svg?)](https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl/graph/badge.svg?token=w06WNAQpNI)](https://codecov.io/gh/oliver-mx/TermiteMoundInducedAirflowTrixi.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
@@ -32,7 +32,22 @@ u(t, x) &= \frac{v(t)}{A(x)} + \frac{1}{A(x)} \int_0^x \frac{A(y)}{\gamma p_0}
 \end{aligned}
 ```
 
-The model is designed to be used with **[Trixi.jl](https://github.com/trixi-framework/Trixi.jl)**, a flexible and high-performance framework for solving systems of conservation laws using the discontinuous Galerkin (DG) method.
+- **The equations** `TermiteMoundEquations1D` for [Trixi.jl](https://github.com/trixi-framework/Trixi.jl),
+  a high-performance framework for conservation laws with the discontinuous Galerkin (DG)
+  method, together with the model parameters (`termite_parameters`) and the model data
+  (cross section, height profile and boundary temperature) of termite mounds.
+- **Two numerical methods** for the PDE-ODE system with algebraic constraint:
+  - a **coupled approach** (`CoupledSourceTerms` + `AlgebraicVelocityCallback`): all
+    equations are integrated together. **This is the recommended approach.**
+  - a **Godunov-type splitting** (`GodunovSplittingCallback`): a first-order operator
+    splitting.
+- **A manufactured solution** to verify both methods (see the
+  [documentation](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/stable/manufactured/)).
+- **Example elixirs** in `examples/` for a termite mound, a reference mound and the
+  manufactured solution, each for both methods.
+
+To get started, follow the
+[tutorial](https://oliver-mx.github.io/TermiteMoundInducedAirflowTrixi.jl/stable/tuto/).
 
 ## Installation
 If you have not yet installed Julia, please [follow the instructions for your
@@ -48,12 +63,9 @@ To run the examples in `examples/`, the following packages are required:
 
 They can be added and installed by executing the following commands in the Julia REPL:
 ```julia
-julia> using Pkg
-
-julia> Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "OrdinaryDiffEqLowStorageRK", "Plots"])
+using Pkg
+Pkg.add(["TermiteMoundInducedAirflowTrixi", "Trixi", "OrdinaryDiffEqLowStorageRK", "Plots"])
 ```
-You can copy and paste all commands to the REPL *including* the leading
-`julia>` prompts - they will automatically be stripped away by Julia.
 
 ## Referencing
 You can directly refer to TermiteMoundInducedAirflowTrixi.jl as
@@ -64,6 +76,7 @@ You can directly refer to TermiteMoundInducedAirflowTrixi.jl as
   author={Marx, Oliver P and Gasser, Ingenuin and Schmidgall, Annika},
   year={2026},
   howpublished={\url{https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl}},
+  url = {https://github.com/oliver-mx/TermiteMoundInducedAirflowTrixi.jl},
   license = {MIT},
   doi = {10.5281/zenodo.22708420}
 }

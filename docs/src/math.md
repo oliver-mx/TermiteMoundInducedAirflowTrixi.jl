@@ -1,7 +1,7 @@
 # Mathematics
 
 The **1D termite mound model** originates from the Euler equations of gas dynamics in a low
-Mach number regime. This page summarizes the derivation; more details can be found in the
+Mach number regime. This page summarizes the derivation. More details can be found in the
 corresponding publication.
 
 ## Scaled Euler equations
@@ -57,9 +57,9 @@ p &= \rho T.
 The boundary temperature is defined piecewise by
 ```math
 T_u(t, x) = \begin{cases}
-  T_{soil}(t) & x \in [0, x_a] \cup [x_c, 1] \quad \text{(soil)}, \\
+  T_{soil}(t) & x \in [0, x_a] \cup (x_c, 1] \quad \text{(soil)}, \\
   \frac{1}{2} \left( T_{air}(t) + T_i(t, x) \right) & x \in (x_a, x_b] \quad \text{(flute)}, \\
-  T_i(t, x) & x \in (x_b, x_c) \quad \text{(chimney)}.
+  T_i(t, x) & x \in (x_b, x_c] \quad \text{(chimney)}.
 \end{cases}
 ```
 It depends on the mound material temperature ``T_i``, the soil temperature ``T_{soil}`` (at

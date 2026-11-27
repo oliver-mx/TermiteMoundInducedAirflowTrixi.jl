@@ -14,18 +14,20 @@ At initialization and after every time step, it writes the algebraic velocity
 u = \frac{v + I_0}{A}, \qquad I_0(x) = \int_{x_{min}}^x A \, (Q - c) \, dy,
 ```
 determined by the current state ``(\rho, v, p_0, T_i)``, into the `v1` field of the solution.
-Here ``Q = -I_w k_w (T - T_u) / (\sqrt{A} \gamma p_0)`` (plus an optional source ``s_p``),
-``c = \int A Q \, dx / \int A \, dx`` and ``T = p_0 / \rho``. The auxiliary velocity
+Here ``Q = -I_w k_w (T - T_u) / (\sqrt{A} \gamma p_0)``,
+``c = \int A Q \, dx / \int A \, dx`` and ``T = p_0 / \rho``. Only for the manufactured
+solution, the term ``s_p / (\gamma p_0)`` with the source ``s_p`` of the ``p_0`` equation is
+added to ``Q`` (see [`CoupledSourceTerms`](@ref)). The auxiliary velocity
 ``v = A(x_{min}) \, v_1(x_{min})`` is stored at the first node, where ``I_0 = 0``.
 
 The callback does not change the solution of the coupled system: the right-hand side reads
 only ``v`` (first node), ``\rho``, ``p_0`` and ``T_i``, and recomputes ``u`` from the
 velocity constraint in every Runge-Kutta stage. The callback is needed because the
 `StepsizeCallback` (CFL condition), the `AnalysisCallback` and the output read the `v1` field
-directly; without it they would see outdated velocities. At initialization it replaces the
+directly. Without it, they would see outdated velocities. At initialization it replaces the
 initial `v1` (e.g. a constant ``v_0``) by the velocity that satisfies the constraint.
 
-### Usage
+# Usage
 Use it together with `source_terms = CoupledSourceTerms(...)` and place it **before** the
 `StepsizeCallback` and the `AnalysisCallback`:
 ```julia
@@ -36,7 +38,7 @@ callbacks = CallbackSet(summary_callback, algebraic_velocity_callback, stepsize_
 
 !!! note
     In contrast to the [`GodunovSplittingCallback`](@ref) of the "splitting" method, this
-    callback does not advance ``v`` and ``p_0`` in time; this is done by the time integrator.
+    callback does not advance ``v`` and ``p_0`` in time. This is done by the time integrator.
     An error is thrown if the semidiscretization was not created with
     [`CoupledSourceTerms`](@ref).
 """

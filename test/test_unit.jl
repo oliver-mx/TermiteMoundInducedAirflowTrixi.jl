@@ -100,7 +100,7 @@ end # @testset "Unit conversions"
                 @test f[4] == 0
             end
         end
-        # Ti only enters the model on (xa, xc) via T_u: perturbing Ti outside of it must
+        # Ti only enters the model on (xa, xc] via T_u: perturbing Ti outside of it must
         # leave rho, v1, p0 and the inner Ti bitwise unchanged
         (
             γ,
@@ -379,7 +379,7 @@ end # @testset "Unit conversions"
             p0 = Array(u[3, :, :])
             Ti = Array(u[4, :, :])
             T = p0 ./ rho
-            Tu = T_u.(t, x, Ti, Ref(equations)) .* equations.t_ref
+            Tu = T_u.(t, x, Ti, Ref(equations))
             s_p, s_v = TMI.ode_source_terms(ode_source_terms, x, t, equations)
             Q =
                 TMI.add_source(

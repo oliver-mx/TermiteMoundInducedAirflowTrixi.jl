@@ -24,7 +24,7 @@ makedocs(;
         "Manufactured solution" => "manufactured.md",
         "Authors" => "auth.md",
         "License" => "lice.md",
-        "References" => "reference.md",
+        "Reference" => "reference.md",
     ],
 )
 
